@@ -1,35 +1,36 @@
 #!jinja2
 ########################
-{% set MODEL        = 'GEFS' %}
-{% set DOWNLOAD_DATA = False %}
+# Items that may need changed
+{% set MODEL        = 'GDAS' %}
+{% set DOWNLOAD_DATA = True %}
 {% set TOP_DIR_OUTPUT   = "/scratch2/NCEPDEV/stmp3/${USER}/DIAG" %}
 {% set TOP_DIR_FIGURES   = "/scratch2/NCEPDEV/stmp3/${USER}/FIGURES" %}
+{% set MAIL_ADDRESS = "name@noaa.gov" %}
 
-####################################
-# times in experiments
+# Values for Experiments 
 {% if MODEL == 'GFS' %}
     {% set EXPS = 'HR1, HR2' %}
     {% set MEMBERS = 1 %}
     {% set AICE_VAR     = 'aice_h' %}
-    {% set ICP = '20180101T12' %}
-    {% set FCP = '20221231T12' %}
 {% elif MODEL == 'GEFS' %}
     {% set EXPS = 'EP4' %}
     {% set MEMBERS = 11 %}
     {% set AICE_VAR     = 'aice_d' %}
-    {% set ICP = '20171004T00' %}
-    {% set FCP = '20210922T00' %}
 {% endif %}
 
 ####################################
 # define suite
+#   hopefully user does not have to edit anything below here
+{% set ICP = '20171004T00' %}
+{% set FCP = '20221231T12' %}
+
 [meta]
     title = "grab and analyize CICE output"
 
 [cylc]
     UTC mode = True
     [[environment]]
-        MAIL_ADDRESS = neil.barton@noaa.gov
+        MAIL_ADDRESS = {{ MAIL_ADDRESS }}
     [[parameters]]
         cice_var = {{ AICE_VAR }}
         experiment = {{ EXPS }}

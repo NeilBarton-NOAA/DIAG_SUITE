@@ -1,23 +1,18 @@
 ################################################
-#DA testing
-[[[R13/2021-07-03T00/P1D]]]
+# Winter
+[[[R29/2019-12-03T00/P3D]]]
     graph = """
         GRAB_EXPS:succeed-all => PARSE_OUTPUT_CICE
         """
-# Winter
-#[[[R29/2019-12-03T00/P3D]]]
-#    graph = """
-#        GRAB_EXPS:succeed-all => PARSE_OUTPUT_CICE
-#        """
-## Summer
-#[[[R31/2020-06-01T00/P3D]]]
-#    graph = """
-#        GRAB_EXPS:succeed-all => PARSE_OUTPUT_CICE
-#        """
-## Hurricane
-#[[[R81/2020-09-01T00/P1D]]]
-#    graph = """
-#        GRAB_EXPS:succeed-all => PARSE_OUTPUT_CICE
-#        PARSE_OUTPUT_CICE:succeed-all => POST_PARSE
-#        """
+# Summer
+[[[R31/2020-06-01T00/P3D]]]
+    graph = """
+        GRAB_EXPS:succeed-all => PARSE_OUTPUT_CICE
+        """
+# Hurricane
+[[[R81/2020-09-01T00/P1D]]]
+    graph = """
+        GRAB_EXPS:succeed-all => PARSE_OUTPUT_CICE
+        PARSE_OUTPUT_CICE:succeed-all => POST_PARSE
+        """
 
