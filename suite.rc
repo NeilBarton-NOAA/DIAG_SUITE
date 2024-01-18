@@ -2,7 +2,7 @@
 ########################
 # Items that may need changed
 {% set MODEL        = 'GDAS' %}
-{% set DOWNLOAD_DATA = True %}
+{% set PARSE_DATA = True %}
 {% set TOP_DIR_OUTPUT   = "/scratch2/NCEPDEV/stmp3/${USER}/DIAG" %}
 {% set TOP_DIR_FIGURES   = "/scratch2/NCEPDEV/stmp3/${USER}/FIGURES" %}
 {% set MAIL_ADDRESS = "name@noaa.gov" %}
@@ -16,13 +16,17 @@
     {% set EXPS = 'EP4' %}
     {% set MEMBERS = 11 %}
     {% set AICE_VAR     = 'aice_d' %}
+{% elif MODEL == 'GDAS' %}
+    {% set EXPS = 'TEST' %}
+    {% set MEMBERS = 1 %}
+    {% set AICE_VAR     = 'aice_d' %}
 {% endif %}
 
 ####################################
 # define suite
 #   hopefully user does not have to edit anything below here
 {% set ICP = '20171004T00' %}
-{% set FCP = '20221231T12' %}
+{% set FCP = '20241231T12' %}
 
 [meta]
     title = "grab and analyize CICE output"
@@ -40,7 +44,7 @@
 [scheduling]
     initial cycle point = {{ ICP }}
     final cycle point = {{ FCP }}
-    max active cycle points = 20
+    max active cycle points = 2
     [[queues]]
         [[[default]]]
             limit = 42
@@ -48,23 +52,27 @@
 
 ################################################
 # download data if needed from HPSS
-{% if DOWNLOAD_DATA %}
+{% if PARSE_DATA %}
         [[[R1]]]
             graph = """
                 GRAB_OBS
                 """
+
 {% if MODEL == 'GFS' %}
 %include INC/GFS_experiments.rc
 {% elif MODEL == 'GEFS' %}
 %include INC/GEFS_experiments.rc
+{% elif MODEL == 'GDAS' %}
+%include INC/GDAS_experiments.rc
 {% endif %}
-{% endif %} # if DOWNLOAD_DATA
+
+{% endif %} # if PARSE_DATA
 
 ################################################
 # parsing data diagnostics at the last cycle point
         [[[R1/P0Y]]]
             graph = """
-{% if not DOWNLOAD_DATA %}
+{% if not PARSE_DATA %}
                  POST_PARSE 
 {% endif %}
                  POST_PARSE => MAPS_ICE_CON
@@ -86,6 +94,9 @@ umask 022
 set -xu
 export SCRIPT_DIR=${CYLC_SUITE_DEF_PATH}/SCRIPTS
 """
+        pre-script = """
+source ${CYLC_SUITE_DEF_PATH}/INC/modules.sh
+        """
         post-script = """
 rm -r ${CYLC_TASK_WORK_DIR}
         """
@@ -107,7 +118,7 @@ rm -r ${CYLC_TASK_WORK_DIR}
             --ntasks = 1
             --time = 00:15:00
             --mem = 0
-            #--qos = debug
+            --qos = debug
 
 ####################################
 # grab experiments and obs
