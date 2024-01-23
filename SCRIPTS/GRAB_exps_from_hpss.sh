@@ -6,8 +6,8 @@ outdir=${3}
 
 EXP=${outdir##*/}
 
-if [[ ${indir} == 'LOCAL_ONLY' ]]; then
-    echo 'FILES already downloaded'
+if [[ ${indir} == *scratch* ]]; then
+    echo 'FILES already on local machine'
     exit 0
 fi
 

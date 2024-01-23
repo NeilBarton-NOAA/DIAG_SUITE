@@ -2,9 +2,11 @@
 set -xu
 dtg=${1}
 var=${2}
-outdir=${3} 
-indir=${DIR_HERA:-$outdir}
-member=$(printf "%02d" ${4})
+indir=${3}
+outdir=${4} 
+member=$(printf "%02d" ${5})
+
+mkdir -p ${outdir}
 
 EXP=${outdir##*/}
 if [[ ${MODEL} == 'GEFS' ]]; then
@@ -77,7 +79,7 @@ if [[ ${MODEL} == 'GFS' ]]; then
         exit 1
     fi
     tau=000
-    out_tau_file=${outdir}/${dtg}/CICE_${dtg}_M${member}_${tau}.nc
+    out_tau_file=${outdir}/TEMP/${dtg}/CICE_${dtg}_M${member}_${tau}.nc
     CICE_PARSE ${in_file} ${out_tau_file} ${var}
     (( $? != 0 )) && exit 1
     file_tau_list=${file_tau_list}' '${out_tau_file}
@@ -98,7 +100,7 @@ for f in ${files}; do
         f_dtg=$(basename ${f}) && f_dtg=${f_dtg:3:10}
     fi
     tau=$( ${SCRIPT_DIR}/CALC_tau.sh ${dtg} ${f_dtg}) && tau=$(printf "%03d" $tau)
-    out_tau_file=${outdir}/${dtg}/CICE_${dtg}_M${member}_${tau}.nc
+    out_tau_file=${outdir}/TEMP/${dtg}/CICE_${dtg}_M${member}_${tau}.nc
     CICE_PARSE ${f} ${out_tau_file} ${var}
     (( $? != 0 )) && exit 1
     file_tau_list=${file_tau_list}' '${out_tau_file}
@@ -107,7 +109,7 @@ done
 ncecat -u tau ${file_tau_list} ${out_file}
 (( $? != 0 )) && exit 1
 rm ${file_tau_list}
-rm -r ${outdir}/${dtg}
+rm -r ${outdir}/TEMP/${dtg}
 echo "CREATED:" ${out_file}
 echo " "
 
