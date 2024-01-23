@@ -17,9 +17,9 @@
     {% set MEMBERS = 11 %}
     {% set AICE_VAR     = 'aice_d' %}
 {% elif MODEL == 'GDAS' %}
-    {% set EXPS = 'TEST' %}
+    {% set EXPS = 'CICETEST' %}
     {% set MEMBERS = 1 %}
-    {% set AICE_VAR     = 'aice_d' %}
+    {% set AICE_VAR     = 'aice_h' %}
 {% endif %}
 
 ####################################
@@ -131,7 +131,7 @@ rm -r ${CYLC_TASK_WORK_DIR}
         inherit = GRAB_EXPS
         script = """
         EXP=${CYLC_TASK_PARAM_experiment}
-        source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/EXP_details.sh
+        source ${CYLC_SUITE_DEF_PATH}/INC/EXP_directories.sh
         ${CYLC_SUITE_DEF_PATH}/SCRIPTS/GRAB_exps_from_hpss.sh ${DTG} ${DIR_HPSS} ${TOP_DIR_OUTPUT}/${EXP}
         """
         #[[[job]]]
@@ -153,7 +153,7 @@ rm -r ${CYLC_TASK_WORK_DIR}
         VAR=${CYLC_TASK_PARAM_cice_var}
         EXP=${CYLC_TASK_PARAM_experiment}
         MEM=${CYLC_TASK_PARAM_mem}
-        source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/EXP_details.sh
+        source ${CYLC_SUITE_DEF_PATH}/INC/EXP_directories.sh
         ${CYLC_SUITE_DEF_PATH}/SCRIPTS/CICE_parse_output.sh ${DTG} ${VAR} ${TOP_DIR_OUTPUT}/${EXP} ${MEM}
         """
         #[[[job]]]

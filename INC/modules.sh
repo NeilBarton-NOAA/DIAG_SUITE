@@ -1,6 +1,6 @@
 #!/bin/sh
 set -u
-
+set +x
 module purge
 module use -a $HOME/TOOLS/modulefiles
 module load conda
@@ -18,4 +18,4 @@ module load esmf/8.3.0
 module load netcdf/4.7.0
 module load wgrib2
 module load cdo
-
+set -x

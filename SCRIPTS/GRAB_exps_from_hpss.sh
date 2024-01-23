@@ -6,6 +6,11 @@ outdir=${3}
 
 EXP=${outdir##*/}
 
+if [[ ${indir} == 'LOCAL_ONLY' ]]; then
+    echo 'FILES already downloaded'
+    exit 0
+fi
+
 mkdir -p ${outdir} && cd ${outdir}
 
 components=CICE

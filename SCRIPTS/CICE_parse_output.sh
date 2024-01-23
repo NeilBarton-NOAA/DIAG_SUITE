@@ -2,23 +2,23 @@
 set -xu
 dtg=${1}
 var=${2}
-topdir=${3} 
+outdir=${3} 
+indir=${DIR_HERA:-$outdir}
 member=$(printf "%02d" ${4})
 
-EXP=${topdir##*/}
+EXP=${outdir##*/}
 if [[ ${MODEL} == 'GEFS' ]]; then
-#if [[ ${EXP} == EP4 ]] || [[ ${EXP} == EP4a ]]; then
-    dir=$( ls -d ${topdir}/${dtg:0:8}/ice/ )
+    dir=$( ls -d ${indir}/${dtg:0:8}/ice/ )
 elif [[ ${EXP} == HR1 ]]; then
-    dir=$( ls -d ${topdir}/*.${dtg:0:8}/${dtg:8:2}/ice/ )
+    dir=$( ls -d ${indir}/*.${dtg:0:8}/${dtg:8:2}/ice/ )
 else
-    dir=$( ls -d ${topdir}/*.${dtg:0:8}/${dtg:8:2}/model_data/ice/history )
+    dir=$( ls -d ${indir}/*.${dtg:0:8}/${dtg:8:2}/model_data/ice/history )
 fi
 
 if [[ ${MODEL} == 'GEFS' ]]; then
-    out_file=${topdir}/${var}_${member}_${dtg}.nc
+    out_file=${outdir}/${var}_${member}_${dtg}.nc
 else 
-    out_file=${topdir}/${var}_${dtg}.nc
+    out_file=${outdir}/${var}_${dtg}.nc
 fi
 
 area_file=$(dirname ${out_file})/cice_area.nc
@@ -44,10 +44,11 @@ CICE_PARSE(){
 in_file=${1}
 out_tau_file=${2}
 var=${3}
+mkdir -p $( dirname ${out_tau_file} )
 if [[ ${MODEL} == 'GEFS' ]]; then
-    temp_file=$( dirname ${in_file})/CICE_VARS_IC_M${member}.nc
+    temp_file=$( dirname ${out_tau_file})/CICE_VARS_IC_M${member}.nc
 else
-    temp_file=$( dirname ${in_file})/CICE_VARS_IC.nc
+    temp_file=$( dirname ${out_tau_file})/CICE_VARS_IC.nc
 fi
 tau=${out_tau_file: -6:3}
 if [[ ! -f ${out_tau_file} ]]; then
@@ -68,7 +69,7 @@ echo "CREATED:" ${out_tau_file}
 ############
 #   IC file
 file_tau_list=""
-if [[ ${MODEL} != 'GEFS' ]]; then
+if [[ ${MODEL} == 'GFS' ]]; then
     # GEFS IC is also written out
     in_file=$(ls ${dir}/iceic*nc)
     if [[ -z ${in_file} ]]; then
@@ -76,7 +77,7 @@ if [[ ${MODEL} != 'GEFS' ]]; then
         exit 1
     fi
     tau=000
-    out_tau_file=$(dirname ${in_file})/CICE_${dtg}_M${member}_${tau}.nc
+    out_tau_file=${outdir}/${dtg}/CICE_${dtg}_M${member}_${tau}.nc
     CICE_PARSE ${in_file} ${out_tau_file} ${var}
     (( $? != 0 )) && exit 1
     file_tau_list=${file_tau_list}' '${out_tau_file}
@@ -97,7 +98,7 @@ for f in ${files}; do
         f_dtg=$(basename ${f}) && f_dtg=${f_dtg:3:10}
     fi
     tau=$( ${SCRIPT_DIR}/CALC_tau.sh ${dtg} ${f_dtg}) && tau=$(printf "%03d" $tau)
-    out_tau_file=$(dirname ${f})/CICE_${dtg}_M${member}_${tau}.nc
+    out_tau_file=${outdir}/${dtg}/CICE_${dtg}_M${member}_${tau}.nc
     CICE_PARSE ${f} ${out_tau_file} ${var}
     (( $? != 0 )) && exit 1
     file_tau_list=${file_tau_list}' '${out_tau_file}
@@ -106,7 +107,7 @@ done
 ncecat -u tau ${file_tau_list} ${out_file}
 (( $? != 0 )) && exit 1
 rm ${file_tau_list}
-
+rm -r ${outdir}/${dtg}
 echo "CREATED:" ${out_file}
 echo " "
 
