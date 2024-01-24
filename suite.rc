@@ -118,7 +118,7 @@ rm -r ${CYLC_TASK_WORK_DIR}
             --ntasks = 1
             --time = 00:15:00
             --mem = 0
-            --qos = debug
+            #--qos = debug
 
 ####################################
 # grab experiments and obs
