@@ -68,7 +68,10 @@ def extent(DAT, area, var = 'aice_d', force_calc = False):
 def daily_taus(DAT, var):
     if ('_h' in var):
         print('MODEL output in hours and OBS in days: will only examine days')
-        u_taus = np.arange(np.min(DAT['tau'].values), np.max(DAT['tau'].values) + 24 , 24)
+        min_tau = np.min(DAT['tau'].values)
+        if min_tau != 0:
+            min_tau = min_tau + (24 - min_tau)
+        u_taus = np.arange(min_tau, np.max(DAT['tau'].values) + 24 , 24)
         DAT['new_tau'] = u_taus
         DAT['new_' + var] = (('new_tau', 'time', 'nj', 'ni'), DAT[var].sel(tau = u_taus).values)
         DAT = DAT.drop(var)

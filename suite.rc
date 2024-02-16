@@ -110,9 +110,9 @@ rm -r ${CYLC_TASK_WORK_DIR}
         [[[job]]]
             execution retry delays = 3*PT10M
             batch system = slurm
-        [[[events]]]
-            failed handler  = cylc email-task
-            submission failed handler = cylc email-task
+        #[[[events]]]
+        #    failed handler  = cylc email-task
+        #    submission failed handler = cylc email-task
         [[[directives]]]
             --account = marine-cpu
             --ntasks = 1

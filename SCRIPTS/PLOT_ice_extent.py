@@ -12,6 +12,7 @@ if 'hfe' in platform.uname()[1]:
     exit(1)
 ########################
 import argparse
+import numpy as np
 import os
 import sys
 import xarray as xr
@@ -38,6 +39,7 @@ for exp in exps:
     print(exp)
     D = xr.open_dataset( tdir + '/' + exp + '/ice_extent.nc')
     D = D.assign_attrs({'save_dir' : '/scratch2/NCEPDEV/stmp3/Neil.Barton/FIGURES'})
+    months = len(np.unique(D['time'].dt.month))
     DAT.append(D)
 
 ####################################
@@ -48,7 +50,10 @@ EXT.append(npb.iceobs.get_extentobs_bootstrap())
 
 ####################################
 # plot month and sea ice extent 
-npb.plot.ice_extent_per_month(DAT, EXT)
+if months > 2:
+    npb.plot.ice_extent_per_month(DAT, EXT)
+else:
+    npb.plot.ice_extent_per_run(DAT,EXT)
 
 ############
 # plot monthly per tau bias heat plots
@@ -56,9 +61,9 @@ npb.plot.ice_extent_per_month(DAT, EXT)
 #       attrs = {'DMIN': -5.0, 'DMAX': 5.0}
 #       CTL = CTL.assign_attrs(attrs)
 #       RPL = RPL.assign_attrs(attrs)
-for d in DAT:
-    for obs in EXT:
-        
-        npb.plot.ice_extent_imshowdiff(d, obs, pole = 'north')
-        npb.plot.ice_extent_imshowdiff(d, obs, pole = 'south')
+if months > 2:
+    for d in DAT:
+        for obs in EXT:
+            npb.plot.ice_extent_imshowdiff(d, obs, pole = 'north')
+            npb.plot.ice_extent_imshowdiff(d, obs, pole = 'south')
 

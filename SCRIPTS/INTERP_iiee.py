@@ -34,12 +34,7 @@ var = args.var[0]
 ########################
 # get observations
 OBS = []
-#OBS = ['persistence']
-#OBS.extend(npb.iceobs.get_icecon_daily_climatology())
 OBS.extend(npb.iceobs.get_icecon_nt())
-#OBS.extend(npb.iceobs.get_icecon_bs())
-#OBS.extend(npb.iceobs.get_icecon_nsidc0051())
-#OBS.extend(npb.iceobs.get_icecon_cdr())
 
 ########################
 # get model results
