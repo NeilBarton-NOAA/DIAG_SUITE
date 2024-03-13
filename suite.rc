@@ -1,11 +1,11 @@
 #!jinja2
 ########################
 # Items that may need changed
-{% set MODEL        = 'GDAS' %}
+{% set MODEL        = 'GEFS' %}
 {% set PARSE_DATA = True %}
 {% set TOP_DIR_OUTPUT   = "/scratch2/NCEPDEV/stmp3/${USER}/DIAG" %}
 {% set TOP_DIR_FIGURES   = "/scratch2/NCEPDEV/stmp3/${USER}/FIGURES" %}
-{% set MAIL_ADDRESS = "name@noaa.gov" %}
+{% set MAIL_ADDRESS = "neil.barton@noaa.gov" %}
 
 # Values for Experiments 
 {% if MODEL == 'GFS' %}
@@ -13,7 +13,7 @@
     {% set MEMBERS = 1 %}
     {% set AICE_VAR     = 'aice_h' %}
 {% elif MODEL == 'GEFS' %}
-    {% set EXPS = 'EP4' %}
+    {% set EXPS = 'EP5, EP5r1' %}
     {% set MEMBERS = 11 %}
     {% set AICE_VAR     = 'aice_d' %}
 {% elif MODEL == 'GDAS' %}

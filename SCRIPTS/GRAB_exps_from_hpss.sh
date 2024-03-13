@@ -16,7 +16,11 @@ mkdir -p ${outdir} && cd ${outdir}
 components=CICE
 [[ ${components} == CICE ]] && f=ice.tar && dir_name=ice
 
-if [[ ${EXP} == EP4 ]] || [[ ${EXP} == EP4a ]]; then
+if [[ ${EXP} == EP5r1 ]]; then
+    dtg=$(( ${dtg:0:8} + 1 ))00
+fi
+
+if [[ ${MODEL} == 'GEFS' ]]; then
     nfiles=$(ls ${dtg:0:8}/${dir_name}/*nc 2>/dev/null | wc -l )
 else
     nfiles=$(ls gfs.${dtg:0:8}/${DTG:8:2}/${dir_name}/*nc 2>/dev/null | wc -l )
@@ -26,13 +30,13 @@ if (( ${nfiles} < 114 )); then
     if [[ ${EXP} == EP4 ]]; then
         dir=$(hsi -q ls ${indir}/${dtg:0:4}/${dtg:0:6}/${dtg:0:8}/gefs.${dtg:0:8}_${dtg:8:10}.${f} 2>&1 | grep :)
         f=gefs.${dtg:0:8}_${dtg:8:10}.${f} 
-    elif [[ ${EXP} == EP4a ]]; then
+    elif [[ ${EXP} == EP4a ]] || [[ ${EXP:0:3} == EP5 ]]; then
         echo ${indir}
         dir=$(hsi -q ls ${indir}/${dtg:0:4}/${dtg:0:6}/${dtg:0:8}/gefs.${dtg:0:8}_${dtg:8:10}.atmos.${f} 2>&1 | grep :)
         f=gefs.${dtg:0:8}_${dtg:8:10}.atmos.${f} 
-        if [[ ${dtg} < 2018010100 ]] || [[ ${dtg} > 2018092500 ]]; then 
-            mkdir -p ${dtg:0:8} && cd ${dtg:0:8}
-        fi
+        #if [[ ${dtg} < 2018010100 ]] || [[ ${dtg} > 2018092500 ]]; then 
+        mkdir -p ${dtg:0:8} && cd ${dtg:0:8}
+        #fi
     else
         dir=$(hsi -q ls ${indir}/*/${dtg}/${f} 2>&1 | grep :)
     fi

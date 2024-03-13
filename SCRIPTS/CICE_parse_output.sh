@@ -8,9 +8,19 @@ member=$(printf "%02d" ${5})
 
 mkdir -p ${outdir}
 
+############
+# check in dir
+if [[ ! -d ${indir} ]]; then
+    indir=${outdir}
+fi
+
 EXP=${outdir##*/}
 if [[ ${MODEL} == 'GEFS' ]]; then
-    dir=$( ls -d ${indir}/${dtg:0:8}/ice/ )
+    if [[ ${EXP} == 'EP5r1' ]]; then
+        dir=$( ls -d ${indir}/$(( ${dtg:0:8} + 1 ))/ice/ )
+    else
+        dir=$( ls -d ${indir}/${dtg:0:8}/ice/ )
+    fi
 elif [[ ${EXP} == HR1 ]]; then
     dir=$( ls -d ${indir}/*.${dtg:0:8}/${dtg:8:2}/ice/ )
 else
@@ -109,7 +119,7 @@ done
 ncecat -u tau ${file_tau_list} ${out_file}
 (( $? != 0 )) && exit 1
 rm ${file_tau_list}
-rm -r ${outdir}/TEMP/${dtg}
+rm -r ${outdir}/TEMP/${dtg}/CICE_${dtg}_M${member}_???.nc
 echo "CREATED:" ${out_file}
 echo " "
 
