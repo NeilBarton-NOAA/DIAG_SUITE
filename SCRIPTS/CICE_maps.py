@@ -62,45 +62,52 @@ if 'member' in DAT.dims:
 DAT['tau'] = DAT['tau'] / 24.0
 times = DAT['time']
 
-########################
+#######################
+TAUS = [ DAT['tau'].values[0] ]
+TAUS.append(DAT['tau'].values[-1])
 npb.maps.icecon.save_dir = save_dir
 npb.maps.icecon.dat = DAT
 npb.maps.icecon.obs = OBS[p]
 npb.maps.icecon.var_name = var
 npb.maps.icecon.pole = pole
 npb.maps.icecon.times = times
-npb.maps.icecon.tau = dat['tau'][0]
-npb.maps.icecon.title = exp + ' for All Times: Forecast Day ' + str(dat['tau'][0])
-npb.maps.icecon.create()
-npb.maps.icecon.tau = DAT['tau'][-1]
-npb.maps.icecon.title = exp + ' for All Times: Forecast Day ' + str(dat['tau'][-1])
-npb.maps.icecon.create()
+for t in TAUS:
+    npb.maps.icecon.tau = t
+    npb.maps.icecon.title = exp + ' for All Times: Forecast Day ' + str(t)
+    npb.maps.icecon.create()
 # plot for each time
 if (len(times) < 20):
     for t in times:
-    #        npb.plot.ice_extent.times = t
-    #        npb.plot.ice_extent.title = np.datetime_as_string(t, timezone='UTC')[0:10]
-    #        npb.plot.ice_extent.create()
-    ## plot by month
-    #months = np.unique(DAT[0]['time'].sel(time = times).dt.month)
-    #for m in months:
-    #    m_times = times.isel(time = times.dt.month.isin([m]))
-    #    npb.plot.ice_extent.times = m_times 
-    #    npb.plot.ice_extent.title = calendar.month_abbr[m].upper() 
-    #    npb.plot.ice_extent.create() 
-    ## plot winter and summer cases
-    #m_times = times.isel(time = times.dt.month.isin([1,2,12]))
-    #npb.plot.ice_extent.times = m_times 
-    #npb.plot.ice_extent.title = 'Winter' 
-    #npb.plot.ice_extent.create() 
-    #m_times = times.isel(time = times.dt.month.isin([6,7,8]))
-    #npb.plot.ice_extent.times = m_times 
-    #npb.plot.ice_extent.title = 'Summer' 
-    #npb.plot.ice_extent.create() 
-#attrs = { 'MIN': 0.0, 'MAX': 1.0, 'DMIN': -1.0, 'DMAX': 1.0}
-#print(pole)
-#npb.maps.monthly(DAT, OBS[p], pole = pole)
-
-
-
-
+        npb.maps.icecon.times = t
+        for tau in TAUS:
+            npb.maps.icecon.tau = tau
+            npb.maps.icecone.title = exp + ' for ' + \
+                np.datetime_as_string(t, timezone='UTC')[0:10] + \
+                ': Forecast Day ' + str(tau)
+            npb.maps.icecon.create()
+# plot by month
+months = np.unique(DAT['time'].sel(time = times).dt.month)
+for m in months:
+    m_times = times.isel(time = times.dt.month.isin([m]))
+    npb.maps.icecon.times = m_times
+    for tau in TAUS:
+        npb.maps.icecon.tau = tau
+        npb.maps.icecone.title = exp + ' for ' + \
+                calendar.month_abbr[m].upper() + \
+                ': Forecast Day ' + str(tau)
+        npb.maps.icecon.create()
+# plot winter and summer cases
+m_times = times.isel(time = times.dt.month.isin([1,2,12]))
+npb.maps.icecon.times = m_times
+for tau in TAUS:
+    npb.maps.icecon.tau = tau
+    npb.maps.icecone.title = exp + ' for Winter' + \
+            ': Forecast Day ' + str(tau)
+    npb.maps.icecon.create()
+m_times = times.isel(time = times.dt.month.isin([6,7,8]))
+npb.maps.icecon.times = m_times
+for tau in TAUS:
+    npb.maps.icecon.tau = tau
+    npb.maps.icecone.title = exp + ' for Summer' + \
+            ': Forecast Day ' + str(tau)
+    npb.maps.icecon.create()

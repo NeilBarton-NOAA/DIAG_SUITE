@@ -35,7 +35,10 @@ class icecon(object):
     def create(cls):
         olon, olat = cls.dat['TLON'], cls.dat['TLAT']
         cmap_DAT = plt.get_cmap('terrain_r')
-        dat = cls.dat[cls.var_name].sel(time = cls.times, tau = cls.tau).mean(dim = 'time') 
+        if cls.times.size == 1:
+            dat = cls.dat[cls.var_name].sel(time = cls.times, tau = cls.tau)
+        else:
+            dat = cls.dat[cls.var_name].sel(time = cls.times, tau = cls.tau).mean(dim = 'time') 
         t_array = npb.timetools.time_plus_tau(cls.times.values, cls.tau*24)
         obs = cls.obs['ice_con'].sel(time = t_array).mean(dim = 'time')
         fig = plt.figure(figsize=(8, 6))
@@ -53,8 +56,6 @@ class icecon(object):
             vmax = 1.0,
             cmap = cmap_DAT)
         ax = npb.base_maps.add_features(ax)
-        print(cls.title)
-        print(t_lon, t_lat)
         ax.text(t_lon, t_lat, cls.title, \
             fontsize = 'large', \
             fontweight = 'bold', \
