@@ -33,7 +33,8 @@ def get_extentobs_NASA():
     files = ['gsfc.nasateam.daily.extent.1978-2021.n', 'gsfc.nasateam.daily.extent.1978-2021.s']
     for ii, f in enumerate(files):
         print(ice_dir + '/' + f)
-        ob = pd.read_csv(ice_dir + '/' + f, delim_whitespace = True)
+        #ob = pd.read_csv(ice_dir + '/' + f, delim_whitespace = True)
+        ob = pd.read_csv(ice_dir + '/' + f, sep='\s+')
         t, hem = [], []
         if f[-1] == 'n':
             v_key = 'TotalArc'
@@ -71,7 +72,8 @@ def get_extentobs_bootstrap():
     files = ['gsfc.bootstrap.daily.extent.1978-2021.n', 'gsfc.bootstrap.daily.extent.1978-2021.s']
     for ii, f in enumerate(files):
         print(ice_dir + '/' + f)
-        ob = pd.read_csv(ice_dir + '/' + f, delim_whitespace = True)
+        #ob = pd.read_csv(ice_dir + '/' + f, delim_whitespace = True)
+        ob = pd.read_csv(ice_dir + '/' + f, sep='\s+')
         if f[-1] == 'n':
             v_key = 'TotalArc'
         elif f[1] == 's':

@@ -242,8 +242,8 @@ def iiee(DAT, DAT_area, OBS, var = 'aice_d', persistence = True):
             t_last = t + np.timedelta64(int(DAT['tau'][-1].values/24), 'D')
             ob = ob.rename_dims({'y': 'y' + ob.grid_name, 'x': 'x' + ob.grid_name, 'time' : 'tau'})
             data = ob['ice_con'].sel(time = slice(t, t_last))
-            data['tau'] = DAT['tau'].values
             data = data.drop_vars('time')
+            data['tau'] = DAT['tau'].values 
         if ob.name != 'persistence':
             data = data.where(data < 2, 0)
             data = data.where(data < 0.15, 1, 0)

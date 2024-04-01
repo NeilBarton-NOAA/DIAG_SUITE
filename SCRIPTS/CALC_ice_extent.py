@@ -22,23 +22,19 @@ import PYTHON_TOOLS as npb
 parser = argparse.ArgumentParser( description = "Compares Sea Ice Extent Between Runs and Observations")
 parser.add_argument('-d', '--dirs', action = 'store', nargs = 1, \
         help="top directory to find model output files")
-parser.add_argument('-e', '--exps', action = 'store', nargs = '+', \
-        help="experiments to calc ice extent. Also name of directory under -d")
 parser.add_argument('-v', '--var', action = 'store', nargs = 1, \
         help="variable to parse")
 args = parser.parse_args()
 tdir = args.dirs[0]
-exps = args.exps
 var = args.var[0]
-for exp in exps:
-    print(exp)
-    f = tdir + '/' + exp + '/cice_area.nc'
-    area = xr.open_dataset(f)
-    file_search = tdir + '/' + exp + '/' + var + '_*.nc'
-    print(file_search)
-    D = xr.open_mfdataset(file_search, combine = 'nested', concat_dim = 'time', decode_times = True)
-    #D = xr.open_mfdataset(file_search) #, combine = 'nested', concat_dim = 'time', decode_times = False)
-    D['tau'] = D['tau'] / 24.0
-    D = D.assign_attrs({'test_name' : exp})
-    D = D.assign_attrs({'extent_file' : tdir + '/' + exp + '/ice_extent.nc'})
-    D = npb.icecalc.extent(D, area, var = var)
+f = tdir + '/cice_area.nc'
+area = xr.open_dataset(f)
+print(tdir)
+file_search = tdir + '/' + var + '_*.nc'
+print(file_search)
+D = xr.open_mfdataset(file_search, combine = 'nested', concat_dim = 'time', decode_times = True)
+#D = xr.open_mfdataset(file_search) #, combine = 'nested', concat_dim = 'time', decode_times = False)
+D['tau'] = D['tau'] / 24.0
+D = D.assign_attrs({'data_dir' : tdir})
+D = D.assign_attrs({'extent_file' : tdir + '/ice_extent.nc'})
+D = npb.icecalc.extent(D, area, var = var)

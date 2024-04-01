@@ -3,13 +3,16 @@
 #2017-2019 (2 years); 2020-2021 (1 year)
 #[[[R104/2017-10-04T00/W-3T00]]]
 #[[[R104/2017-10-04T00/P7D]]]
-[[[R8/2018-01-03T00/P7D]]]
+
+#[[[R8/2018-01-03T00/P7D]]]
+[[[R8/2018-01-04T00/P7D]]]
     graph = """
         GRAB_EXPS:succeed-all           => PARSE_OUTPUT_CICE
         PARSE_OUTPUT_CICE:succeed-all   => ENSEMBLE_COMBINE
         ENSEMBLE_COMBINE:succeed-all    => POST_PARSE
         """
-[[[R8/2018-08-01T00/P7D]]]
+#[[[R8/2018-08-01T00/P7D]]]
+[[[R8/2018-08-02T00/P7D]]]
     graph = """
         GRAB_EXPS:succeed-all           => PARSE_OUTPUT_CICE
         PARSE_OUTPUT_CICE:succeed-all   => ENSEMBLE_COMBINE

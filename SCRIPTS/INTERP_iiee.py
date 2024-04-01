@@ -22,13 +22,10 @@ import PYTHON_TOOLS as npb
 parser = argparse.ArgumentParser( description = "Interp data and writes fields in Ones and Zeros")
 parser.add_argument('-d', '--dirs', action = 'store', nargs = 1, \
         help="top directory to find model output files")
-parser.add_argument('-e', '--exps', action = 'store', nargs = '+', \
-        help="experiments to calc ice extent. Also name of directory under -d")
 parser.add_argument('-v', '--var', action = 'store', nargs = 1, \
         help="variable to parse")
 args = parser.parse_args()
 tdir = args.dirs[0]
-exps = args.exps
 var = args.var[0]
 
 ########################
@@ -38,12 +35,11 @@ OBS.extend(npb.iceobs.get_icecon_nt())
 
 ########################
 # get model results
-for exp in exps:
-    files = glob.glob(tdir + '/' + exp + '/' + var + '*.nc')
-    files.sort()
-    for f in files:
-        print(f)
-        DAT = xr.open_dataset(f)
-        DAT = DAT.assign_attrs({'file_name' : f }) 
-        npb.icecalc.interp(DAT, OBS, var = var, force_calc = False)
+files = glob.glob(tdir + '/' + var + '*.nc')
+files.sort()
+for f in files:
+    print(f)
+    DAT = xr.open_dataset(f)
+    DAT = DAT.assign_attrs({'file_name' : f }) 
+    npb.icecalc.interp(DAT, OBS, var = var, force_calc = False)
 

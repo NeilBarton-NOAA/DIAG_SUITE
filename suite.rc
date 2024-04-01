@@ -1,26 +1,12 @@
 #!jinja2
 ########################
 # Items that may need changed
-{% set MODEL        = 'GEFS' %}
+{% set MODEL = 'GEFS' %}
+{% set EXPS = 'EP5r1' %}
+{% set AICE_VAR = "aice_d" %}
+{% set ENS_MEMBERS = 10 %}
 {% set PARSE_DATA = True %}
-{% set TOP_DIR_OUTPUT   = "/scratch2/NCEPDEV/stmp3/${USER}/DIAG" %}
-{% set TOP_DIR_FIGURES   = "/scratch2/NCEPDEV/stmp3/${USER}/FIGURES" %}
 {% set MAIL_ADDRESS = "neil.barton@noaa.gov" %}
-
-# Values for Experiments 
-{% if MODEL == 'GFS' %}
-    {% set EXPS = 'HR1, HR2' %}
-    {% set MEMBERS = 1 %}
-    {% set AICE_VAR     = 'aice_h' %}
-{% elif MODEL == 'GEFS' %}
-    {% set EXPS = 'EP5, EP5r1' %}
-    {% set MEMBERS = 11 %}
-    {% set AICE_VAR     = 'aice_d' %}
-{% elif MODEL == 'GDAS' %}
-    {% set EXPS = 'DA_TEST' %}
-    {% set MEMBERS = 1 %}
-    {% set AICE_VAR     = 'aice_h' %}
-{% endif %}
 
 ####################################
 # define suite
@@ -38,13 +24,13 @@
     [[parameters]]
         cice_var = {{ AICE_VAR }}
         experiment = {{ EXPS }}
-        mem = 0..{{ MEMBERS - 1 }}
+        mem = 0..{{ ENS_MEMBERS }}
         poles = 'north', 'south'
 
 [scheduling]
     initial cycle point = {{ ICP }}
     final cycle point = {{ FCP }}
-    max active cycle points = 2
+    max active cycle points = 6
     [[queues]]
         [[[default]]]
             limit = 42
@@ -75,14 +61,14 @@
 {% if not PARSE_DATA %}
                  POST_PARSE 
 {% endif %}
-                 POST_PARSE => MAPS_ICE_CON
                  POST_PARSE => CALC_ICE_EXTENT 
-                 POST_PARSE => INTERP_FOR_IIEE
+                 POST_PARSE => INTERP_ICE
 
                  CALC_ICE_EXTENT:succeed-all => plot_ice_extent
                  
-                 INTERP_FOR_IIEE:succeed-all => CALC_IIEE
+                 INTERP_ICE:succeed-all => CALC_IIEE
                  CALC_IIEE:succeed-all   => plot_iiee
+                 INTERP_ICE:succeed-all => MAPS_ICE_CON
                 """
 
 ################################################
@@ -95,7 +81,8 @@ set -xu
 export SCRIPT_DIR=${CYLC_SUITE_DEF_PATH}/SCRIPTS
 """
         pre-script = """
-source ${CYLC_SUITE_DEF_PATH}/INC/modules.sh
+source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/modules.sh
+unset ESMFMKFILE
         """
         post-script = """
 rm -r ${CYLC_TASK_WORK_DIR}
@@ -103,10 +90,9 @@ rm -r ${CYLC_TASK_WORK_DIR}
         [[[environment]]]
             AICE_VAR            = {{ AICE_VAR }}
             DTG                 = $(cylc cycle-point --template=%Y%m%d%H)
-            TOP_DIR_OUTPUT      = {{ TOP_DIR_OUTPUT }}
             MODEL               = {{ MODEL }}
-            TOP_DIR_FIGURES     = {{ TOP_DIR_FIGURES }}
             EXPS                = {{ EXPS }}
+            ENS_MEMBERS             = {{ ENS_MEMBERS }}
         [[[job]]]
             execution retry delays = 3*PT10M
             batch system = slurm
@@ -116,7 +102,7 @@ rm -r ${CYLC_TASK_WORK_DIR}
         [[[directives]]]
             --account = marine-cpu
             --ntasks = 1
-            --time = 00:15:00
+            --time = 00:30:00
             --mem = 0
             #--qos = debug
 
@@ -131,8 +117,7 @@ rm -r ${CYLC_TASK_WORK_DIR}
         inherit = GRAB_EXPS
         script = """
         EXP=${CYLC_TASK_PARAM_experiment}
-        source ${CYLC_SUITE_DEF_PATH}/INC/EXP_directories.sh
-        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/GRAB_exps_from_hpss.sh ${DTG} ${DIR_DATA} ${TOP_DIR_OUTPUT}/${EXP}
+        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/GRAB_exps_from_hpss.sh ${DTG} ${EXP} ${ENS_MEMBERS}
         """
         #[[[job]]]
         #    batch system = background
@@ -153,8 +138,7 @@ rm -r ${CYLC_TASK_WORK_DIR}
         VAR=${CYLC_TASK_PARAM_cice_var}
         EXP=${CYLC_TASK_PARAM_experiment}
         MEM=${CYLC_TASK_PARAM_mem}
-        source ${CYLC_SUITE_DEF_PATH}/INC/EXP_directories.sh
-        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/CICE_parse_output.sh ${DTG} ${VAR} ${DIR_DATA} ${TOP_DIR_OUTPUT}/${EXP} ${MEM}
+        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/CICE_parse_output.sh ${DTG} ${VAR} ${EXP} ${MEM}
         """
         #[[[job]]]
         #    batch system = background
@@ -164,7 +148,7 @@ rm -r ${CYLC_TASK_WORK_DIR}
         script = """
         VAR=${CYLC_TASK_PARAM_cice_var}
         EXP=${CYLC_TASK_PARAM_experiment}
-        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/ENS_combine_files.sh ${DTG} ${VAR} ${TOP_DIR_OUTPUT}/${EXP} 
+        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/ENS_combine_files.sh ${DTG} ${VAR} ${EXP} 
         """
         #[[[job]]]
         #    batch system = background
@@ -182,20 +166,24 @@ rm -r ${CYLC_TASK_WORK_DIR}
         inherit = CALC_ICE_EXTENT
         script = """
         EXP=${CYLC_TASK_PARAM_experiment}
-        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/CALC_ice_extent.py -d ${TOP_DIR_OUTPUT} -e ${EXP} -v ${AICE_VAR}
+        source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/directories.sh ${EXP}
+        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/CALC_ice_extent.py -d ${TOPDIR_OUTPUT}/${EXP} -v ${AICE_VAR}
         """
         [[[directives]]]
             --time = 04:00:00
+            #--qos = debug
    [[plot_ice_extent]]
         script = """
-        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/PLOT_ice_extent.py -d ${TOP_DIR_OUTPUT} -e ${EXPS} -v ${AICE_VAR}
+        source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/directories.sh HR1
+        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/PLOT_ice_extent.py -d ${TOPDIR_OUTPUT} -e ${EXPS} -v ${AICE_VAR} -fd ${TOPDIR_FIGURES}
         """
-   [[INTERP_FOR_IIEE]]
-   [[interp_for_iiee<experiment>]]
-        inherit = INTERP_FOR_IIEE
+   [[INTERP_ICE]]
+   [[interp_ice<experiment>]]
+        inherit = INTERP_ICE
         script = """
         EXP=${CYLC_TASK_PARAM_experiment}
-        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/INTERP_iiee.py -d ${TOP_DIR_OUTPUT} -e ${EXP} -v ${AICE_VAR}
+        source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/directories.sh ${EXP}
+        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/INTERP_iiee.py -d ${TOPDIR_OUTPUT}/${EXP} -v ${AICE_VAR}
         """
         [[[directives]]]
             --time = 08:00:00
@@ -204,7 +192,8 @@ rm -r ${CYLC_TASK_WORK_DIR}
         inherit = CALC_IIEE
         script = """
         EXP=${CYLC_TASK_PARAM_experiment}
-        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/CALC_iiee.py -d ${TOP_DIR_OUTPUT} -e ${EXP} -v ${AICE_VAR}
+        source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/directories.sh ${EXP}
+        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/CALC_iiee.py -d ${TOPDIR_OUTPUT}/${EXP} -v ${AICE_VAR}
         """
         [[[directives]]]
             --time = 08:00:00
@@ -218,7 +207,8 @@ rm -r ${CYLC_TASK_WORK_DIR}
         script = """
         EXP=${CYLC_TASK_PARAM_experiment}
         POLE=${CYLC_TASK_PARAM_poles}
-        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/CICE_maps.py -d ${TOP_DIR_OUTPUT} -e ${EXP} -v ${AICE_VAR} -p ${POLE}
+        source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/directories.sh ${EXP}
+        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/CICE_maps.py -d ${TOPDIR_OUTPUT}/${EXP} -e ${EXP} -v ${AICE_VAR} -p ${POLE} -fd ${TOPDIR_FIGURES}
         """
         [[[directives]]]
             --time = 08:00:00

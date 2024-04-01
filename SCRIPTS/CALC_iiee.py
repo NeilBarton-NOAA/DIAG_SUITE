@@ -22,13 +22,10 @@ import PYTHON_TOOLS as npb
 parser = argparse.ArgumentParser( description = "Calculates Integrated Ice Extent Error Between Runs and Observations")
 parser.add_argument('-d', '--dirs', action = 'store', nargs = 1, \
         help="top directory to find model output files")
-parser.add_argument('-e', '--exps', action = 'store', nargs = '+', \
-        help="experiments to calc ice extent. Also name of directory under -d")
 parser.add_argument('-v', '--var', action = 'store', nargs = 1, \
         help="variable to parse")
 args = parser.parse_args()
 tdir = args.dirs[0]
-exps = args.exps
 var = args.var[0]
 
 ########################
@@ -42,28 +39,24 @@ ICEOBS.extend(npb.iceobs.get_icecon_cdr())
 
 ########################
 # get model results
-for exp in exps:
-    f = tdir + '/' + exp + '/cice_area.nc'
-    area = xr.open_dataset(f)
-    #file_search = tdir + '/' + exp + '/interp_obs_grids_' + var + '*2020102100*.nc'
-    file_search = tdir + '/' + exp + '/interp_obs_grids_' + var + '*.nc'
-    files = glob.glob(file_search)
-    files.sort()
-    exp_dat = []
-    iiee_file = tdir + '/' + exp + '/iiee.nc'
-    #if os.path.exists(iiee_file):
-    #   os.remove(iiee_file) 
-    if os.path.exists(iiee_file) == False:
-        for f in files:
-            print(f)
-            DAT = xr.open_dataset(f) #, combine = 'nested', concat_dim = 'time', decode_times = True)
-            DAT = DAT.assign_attrs({'test_name' : exp})
-            # calc iiee scores
-            temp = npb.icecalc.iiee(DAT, area, ICEOBS, persistence = True, var = var)
-            exp_dat.append(temp)
-        print('concating data')
-        ds = xr.concat(exp_dat, dim = 'time')
-        # save data
-        ds.to_netcdf(iiee_file)
-        print('SAVED: ', iiee_file)
+f = tdir + '/cice_area.nc'
+area = xr.open_dataset(f)
+#file_search = tdir + '/' + exp + '/interp_obs_grids_' + var + '*2020102100*.nc'
+file_search = tdir + '/interp_obs_grids_' + var + '*.nc'
+files = glob.glob(file_search)
+files.sort()
+exp_dat = []
+iiee_file = tdir + '/iiee.nc'
+if os.path.exists(iiee_file) == False:
+    for f in files:
+        print(f)
+        DAT = xr.open_dataset(f) #, combine = 'nested', concat_dim = 'time', decode_times = True)
+        # calc iiee scores
+        temp = npb.icecalc.iiee(DAT, area, ICEOBS, persistence = True, var = var)
+        exp_dat.append(temp)
+    print('concating data')
+    ds = xr.concat(exp_dat, dim = 'time')
+    # save data
+    ds.to_netcdf(iiee_file)
+    print('SAVED: ', iiee_file)
 

@@ -2,9 +2,12 @@
 set -xu
 dtg=${1}
 var=${2}
-topdir=${3} 
+EXP=${3} 
 
-out_file=${topdir}/${var}_${dtg}.nc
+SCRIPT_DIR=$(dirname "$0")
+source ${SCRIPT_DIR}/directories.sh ${EXP}
+
+out_file=${TOPDIR_OUTPUT}/${EXP}/${var}_${dtg}.nc
 
 if [[ -f ${out_file} ]]; then
     echo "${out_file} already made"
@@ -12,7 +15,7 @@ if [[ -f ${out_file} ]]; then
     exit 0
 fi
 
-files=$( ls ${topdir}/${var}_*_${dtg}.nc )
+files=$( ls ${TOPDIR_OUTPUT}/${EXP}/${var}_*_${dtg}.nc )
 ncecat -u member ${files} ${out_file}
 (( $? != 0 )) && exit 1
 rm ${files}
