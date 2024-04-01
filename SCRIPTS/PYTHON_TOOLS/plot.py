@@ -55,7 +55,6 @@ class ice_extent(object):
             plt.close()
             #exit(1)
 
-
 def ice_extent_imshowdiff(DAT1, DAT2, pole = 'north'):
     dat_plot = []
     y_label = []
@@ -137,4 +136,10 @@ def ice_extent_imshowdiff(DAT1, DAT2, pole = 'north'):
     plt.savefig(fig_name, bbox_inches = 'tight')
     plt.close()
     print('SAVED:', fig_name)
+
+#class iiee(object):
+#    pole = 'north'
+#    save_dir = './'
+#    @classmethod
+#    def create(cls):
 

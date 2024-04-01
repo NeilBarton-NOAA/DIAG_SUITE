@@ -39,7 +39,7 @@ in_file=${1}
 out_tau_file=${2}
 var=${3}
 mkdir -p $( dirname ${out_tau_file} )
-if [[ ${MODEL} == 'GEFS' ]]; then
+if (( ${ENS_MEMBSERS} > 0 )); then
     temp_file=$( dirname ${out_tau_file})/CICE_VARS_IC_M${member}.nc
 else
     temp_file=$( dirname ${out_tau_file})/CICE_VARS_IC.nc

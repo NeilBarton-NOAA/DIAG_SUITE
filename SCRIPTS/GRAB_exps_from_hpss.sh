@@ -3,7 +3,6 @@ set -u
 dtg=${1}
 EXP=${2}
 ENS_MEMBERS=${3}
-MODEL=${MODEL:-'GEFS'}
 SCRIPT_DIR=$(dirname "$0")
 
 source ${SCRIPT_DIR}/directories.sh ${EXP}
@@ -17,7 +16,7 @@ fi
 components=CICE
 [[ ${components} == CICE ]] && f=ice.tar && dir_name=ice
 
-if [[ ${MODEL} == 'GEFS' ]]; then
+if [[ ${EXP:0:2} == 'EP' ]]; then
     set -x
     local_download_dir=${TOPDIR_OUTPUT}/${EXP}/${dtg:0:8}
     hpss_file=${SRC_DIR}/${dtg:0:4}/${dtg:0:6}/${dtg:0:8}/gefs.${dtg:0:8}_${dtg:8:10}.atmos.${f} 

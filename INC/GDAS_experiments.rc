@@ -1,6 +1,0 @@
-################################################
-[[[R13/2021-07-03T00/P1D]]]
-    graph = """
-        GRAB_EXPS:succeed-all => PARSE_OUTPUT_CICE
-        PARSE_OUTPUT_CICE:succeed-all => POST_PARSE
-    """

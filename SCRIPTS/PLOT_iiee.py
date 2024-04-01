@@ -30,11 +30,16 @@ parser.add_argument('-e', '--exps', action = 'store', nargs = '+', \
         help="experiments to calc ice extent. Also name of directory under -d")
 parser.add_argument('-v', '--var', action = 'store', nargs = 1, \
         help="variable to parse")
+parser.add_argument('-fd', '--figuredir', action = 'store', nargs = 1, \
+        help="directory of figures")
 args = parser.parse_args()
 tdir = args.dirs[0]
 exps = args.exps
 var = args.var[0]
+save_dir = args.figuredir[0]
 
+print('NPB: redo this similar to ice extent plots')
+exit(1)
 save_dir = '/scratch2/NCEPDEV/stmp3/Neil.Barton/FIGURES'
 
 obs_types = ['climatology', 'cdr_seaice_conc', 'cdr_seaice_conc_persistence', 'persistence']

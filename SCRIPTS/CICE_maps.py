@@ -14,6 +14,7 @@ if 'hfe' in platform.uname()[1]:
 import argparse
 import os
 import glob
+import numpy as np
 import sys
 import xarray as xr
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) )
@@ -81,7 +82,7 @@ if (len(times) < 20):
         npb.maps.icecon.times = t
         for tau in TAUS:
             npb.maps.icecon.tau = tau
-            npb.maps.icecone.title = exp + ' for ' + \
+            npb.maps.icecon.title = exp + ' for ' + \
                 np.datetime_as_string(t, timezone='UTC')[0:10] + \
                 ': Forecast Day ' + str(tau)
             npb.maps.icecon.create()
@@ -92,7 +93,7 @@ for m in months:
     npb.maps.icecon.times = m_times
     for tau in TAUS:
         npb.maps.icecon.tau = tau
-        npb.maps.icecone.title = exp + ' for ' + \
+        npb.maps.icecon.title = exp + ' for ' + \
                 calendar.month_abbr[m].upper() + \
                 ': Forecast Day ' + str(tau)
         npb.maps.icecon.create()
@@ -101,13 +102,13 @@ m_times = times.isel(time = times.dt.month.isin([1,2,12]))
 npb.maps.icecon.times = m_times
 for tau in TAUS:
     npb.maps.icecon.tau = tau
-    npb.maps.icecone.title = exp + ' for Winter' + \
+    npb.maps.icecon.title = exp + ' for Winter' + \
             ': Forecast Day ' + str(tau)
     npb.maps.icecon.create()
 m_times = times.isel(time = times.dt.month.isin([6,7,8]))
 npb.maps.icecon.times = m_times
 for tau in TAUS:
     npb.maps.icecon.tau = tau
-    npb.maps.icecone.title = exp + ' for Summer' + \
+    npb.maps.icecon.title = exp + ' for Summer' + \
             ': Forecast Day ' + str(tau)
     npb.maps.icecon.create()

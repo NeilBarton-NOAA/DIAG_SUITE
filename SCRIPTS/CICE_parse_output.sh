@@ -4,7 +4,6 @@ dtg=${1}
 var=${2}
 EXP=${3}
 member=$(printf "%02d" ${4})
-MODEL=${MODEL:-'GEFS'}
 
 SCRIPT_DIR=$(dirname "$0")
 source ${SCRIPT_DIR}/directories.sh ${EXP}
@@ -13,16 +12,15 @@ source ${SCRIPT_DIR}/functions.sh ${EXP}
 if [[ ${SRC_DIR} == *scratch* ]]; then
     src_dir=${SRC_DIR}
 else
-    if [[ ${MODEL} == 'GEFS' ]]; then
-        src_dir=$( ls -d ${TOPDIR_OUTPUT}/${EXP}/${dtg:0:8}/ice/ )
-    elif [[ ${EXP} == HR1 ]] ; then
-        src_dir=$( ls -d ${TOPDIR_OUTPUT}/${EXP}/*.${dtg:0:8}/${dtg:8:2}/ice/ )
-    else
-        src_dir=$( ls -d ${TOPDIR_OUTPUT}/*.${dtg:0:8}/${dtg:8:2}/model_data/ice/history )
-    fi
+    src_dir=${local_ice_dir}
+    #elif [[ ${EXP} == HR1 ]] ; then
+    #    src_dir=$( ls -d ${TOPDIR_OUTPUT}/${EXP}/*.${dtg:0:8}/${dtg:8:2}/ice/ )
+    #else
+    #    src_dir=$( ls -d ${TOPDIR_OUTPUT}/*.${dtg:0:8}/${dtg:8:2}/model_data/ice/history )
+    #fi
 fi
 
-if [[ ${MODEL} == 'GEFS' ]]; then
+if (( ${ENS_MEMBERS} > 0 )); then
     out_file=${TOPDIR_OUTPUT}/${EXP}/${var}_${member}_${dtg}.nc
 else 
     out_file=${TOPDIR_OUTPUT}/${EXP}/${var}_${dtg}.nc
@@ -31,7 +29,7 @@ fi
 area_file=$(dirname ${out_file})/cice_area.nc
 if [[ ! -f ${area_file} ]]; then
     echo "making area file"
-    if [[ ${MODEL} == GEFS ]]; then
+    if (( ${ENS_MEMBERS} > 0 )); then
         f=$(ls ${src_dir}/iceh*${member}.nc | tail -1)
     else
         f=$(ls ${dir}/ice[1,2]*.nc | tail -1)

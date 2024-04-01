@@ -251,6 +251,8 @@ def iiee(DAT, DAT_area, OBS, var = 'aice_d', persistence = True):
         # take diff for IIEE calculations 
         DAT['diff'] = (model_dims, model.values - data.values) 
         if ob.name == 'persistence':
+            print('NPB: re calc IIEE for persistence')
+            exit(1)
             DAT['iiee'][k,0,:] = (np.multiply(abs(DAT['diff']), area)).where(DAT['TLAT'] > 50).sum(dim = dim_sum).values / 1e12
             DAT['aee'][k,0,:]  = abs(np.multiply(DAT['diff'], area).where(DAT['TLAT'] > 50).sum(dim = dim_sum).values / 1e12)
             DAT['iiee'][k,1,:] = (np.multiply(abs(DAT['diff']), area)).where(DAT['TLAT'] < 50).sum(dim = dim_sum).values / 1e12
