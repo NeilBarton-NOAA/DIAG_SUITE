@@ -1,6 +1,7 @@
 #!/bin/sh
 set -u
 EXP=${1:-HR1}
+dtg=${3:-${DTG}}
 
 SCRIPT_DIR=${SCRIPT_DIR:-$PWD}
 
