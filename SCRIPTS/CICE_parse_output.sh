@@ -6,7 +6,7 @@ EXP=${3}
 member=$(printf "%02d" ${4})
 
 SCRIPT_DIR=$(dirname "$0")
-source ${SCRIPT_DIR}/directories.sh ${EXP}
+source ${SCRIPT_DIR}/directories.sh ${EXP} ${dtg}
 source ${SCRIPT_DIR}/functions.sh ${EXP}
 
 if [[ ${SRC_DIR} == *scratch* ]]; then

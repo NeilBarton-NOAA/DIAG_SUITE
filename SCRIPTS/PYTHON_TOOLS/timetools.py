@@ -2,10 +2,13 @@
 def time_plus_tau(times, tau):
     import numpy as np
     import pandas as pd
-    t_array = []
-    times = pd.to_datetime(times)
-    for t in times:
-        t_array.append((t + pd.to_timedelta(tau, unit = 'h')).to_numpy())
+    if times.size == 1:
+        t_array = (times + pd.to_timedelta(tau, unit = 'h')).to_numpy()
+    else:
+        times = pd.to_datetime(times)
+        t_array = []
+        for t in times:
+            t_array.append((t + pd.to_timedelta(tau, unit = 'h')).to_numpy())
     return np.array(t_array) 
 
 ################################################

@@ -40,7 +40,10 @@ class icecon(object):
         else:
             dat = cls.dat[cls.var_name].sel(time = cls.times, tau = cls.tau).mean(dim = 'time') 
         t_array = npb.timetools.time_plus_tau(cls.times.values, cls.tau*24)
-        obs = cls.obs['ice_con'].sel(time = t_array).mean(dim = 'time')
+        if cls.times.size == 1:
+            obs = cls.obs['ice_con'].sel(time = t_array)
+        else:
+            obs = cls.obs['ice_con'].sel(time = t_array).mean(dim = 'time')
         fig = plt.figure(figsize=(8, 6))
         if cls.pole == 'north':
             ax = fig.add_subplot(1,1,1, projection = ccrs.NorthPolarStereo())
@@ -65,7 +68,7 @@ class icecon(object):
         ax.contour(x, y, obs, [0.15], colors = ['k'], linewidths = 2.0, transform = ccrs.Stereographic(**kw))
         cbar_ax = fig.add_axes([0.25, 0.07, 0.52, 0.035])
         fig.colorbar(im, cax = cbar_ax, orientation='horizontal' )
-        fig_name = cls.save_dir + '/' + cls.pole[0].upper() + 'H_' \
+        fig_name = cls.save_dir + '/' + cls.pole[0].upper() + 'H_map' \
             + cls.title.replace(' ','').replace(':','') + '.png'
         print('SAVED:', fig_name)
         plt.savefig(fig_name, bbox_inches = 'tight')

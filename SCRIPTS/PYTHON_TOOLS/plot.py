@@ -137,9 +137,95 @@ def ice_extent_imshowdiff(DAT1, DAT2, pole = 'north'):
     plt.close()
     print('SAVED:', fig_name)
 
-#class iiee(object):
-#    pole = 'north'
-#    save_dir = './'
-#    @classmethod
-#    def create(cls):
-
+class iiee(object):
+    pole = 'north'
+    save_dir = './'
+    @classmethod
+    def create(cls):
+        exp_title = ''
+        for dat in cls.DATS:
+            exp_title = exp_title + dat.test_name + '_'
+            for ob in cls.OBS_TYPES:
+                print(ob)
+                if cls.times.size == 1:
+                    data = dat['iiee'].sel(obs_type = ob, pole = cls.pole, time = cls.times)
+                else:
+                    data = dat['iiee'].sel(obs_type = ob, pole = cls.pole, time = cls.times).mean('time')
+                label = dat.test_name + ' vs '
+                if 'ice_con' in ob:
+                    if 'persistence' in ob:
+                        label = label + 'Persistence: ' + ob.split('_')[0].upper() 
+                    else:
+                        label = label + 'Obs: ' + ob.split('_')[0].upper() 
+                else:
+                    label = label + ob.capitalize()
+                if 'member' in data.dims:
+                    plt.plot(data['tau'].values, data.mean('member').values, linewidth = 2.0, label = label )
+                    plt.fill_between(data['tau'].values, data.min('member').values, data.max('member').values, alpha = 0.5)
+                else:
+                    data.plot(linewidth = 2.0, label = label)
+        if cls.pole == 'north':
+            t = 'Arctic '
+        elif cls.pole == 'south':
+            t = 'Antarctic '
+        plt.title(t + cls.title)
+        plt.ylabel('IIEE')
+        plt.xlabel('Forecast Day')
+        plt.legend(frameon = False)
+        fig_name = cls.save_dir + '/' + cls.pole[0].upper() + 'H_iiee_' + exp_title + cls.title.replace(' ','').replace(':','').replace('/','') + '.png'
+        plt.savefig(fig_name, bbox_inches = 'tight')
+        print('SAVED:', fig_name)  
+        #plt.show()
+               
+#class iiee_min_per_month(object): 
+#    e = e.replace(',','').strip()
+#        f = tdir + '/' + e + '/iiee.nc'
+#        dat = xr.open_dataset(f)
+#        dat['tau'] = dat['tau'] / 24.0
+#        ob_type_month, y_label = [], []
+#        for month in np.arange(1,13):
+#            y_label.append(calendar.month_abbr[month])
+#            if month < 12:
+#                c_time = dat['time'].isel(time = dat['time'].dt.month.isin([month]))
+#                title = 'IIEE: ' + calendar.month_abbr[month].upper() + ' ' + e 
+#                fig_name = save_dir + '/' + pole[0].upper() + 'H_' + calendar.month_abbr[month].upper() + '_IIEE.png'
+#            else:
+#                c_time = dat['time']
+#                title = 'IIEE: ' + e 
+#                fig_name = save_dir + '/' + pole[0].upper() + 'H_ALL_TIMES_IIEE.png'
+#            #obs_types = dat['obs_type'].values
+#            if (c_time.size > 0):
+#                # save data for comparison
+#                min_ob_type = []
+#                for ob in obs_types:
+#                    print(ob)
+#                    if 'ice_con' in ob:
+#                        label = 'GEFS/EP4'
+#                    else:
+#                        label = ob.capitalize()
+#                    #label = ob.replace('_seaice_conc','')
+#                    #label = label.replace('_','-')
+#                    data = dat['iiee'].sel(obs_type = ob, pole = pole, time = c_time).mean('time')
+#                    if 'member' in data.dims:
+#                        plt.plot(data['tau'].values, data.mean('member').values, linewidth = 2.0, label = label )
+#                        plt.fill_between(data['tau'].values, data.min('member').values, data.max('member').values, alpha = 0.5)
+#                        min_ob_type.append(data.mean('member').values)
+#                    else:
+#                        data.plot(linewidth = 2.0, label = label)
+#                        min_ob_type.append(data.values)
+#                    colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
+#                    #ax = kwargs.pop('ax', plt.gca())
+#                    #base_line, = ax.plot(x, y, **kwargs)
+#                    #print(base_line.get_color())
+#                ob_type_month.append(np.argmin(np.array(min_ob_type), axis = 0))
+#                if pole == 'north':
+#                    t = 'Arctic '
+#                elif pole == 'south':
+#                    t = 'Antarctic '
+#                plt.title(t + title)
+#                plt.ylabel('IIEE')
+#                plt.xlabel('Forecast Day')
+#                plt.legend(frameon = False)
+#                #plt.show()
+#                print(fig_name)
+  

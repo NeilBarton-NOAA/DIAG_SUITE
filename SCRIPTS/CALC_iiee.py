@@ -34,19 +34,21 @@ ICEOBS = []
 ICEOBS.extend(npb.iceobs.get_icecon_daily_climatology())
 ICEOBS.extend(npb.iceobs.get_icecon_nt())
 ICEOBS.extend(npb.iceobs.get_icecon_bs())
-#OBS.extend(npb.iceobs.get_icecon_nsidc0051())
 ICEOBS.extend(npb.iceobs.get_icecon_cdr())
 
 ########################
 # get model results
 f = tdir + '/cice_area.nc'
 area = xr.open_dataset(f)
-#file_search = tdir + '/' + exp + '/interp_obs_grids_' + var + '*2020102100*.nc'
 file_search = tdir + '/interp_obs_grids_' + var + '*.nc'
 files = glob.glob(file_search)
 files.sort()
 exp_dat = []
 iiee_file = tdir + '/iiee.nc'
+#if os.path.exists(iiee_file):
+#    print('Removing IIEE file')
+#    os.remove(iiee_file)
+#files = [files[0]]
 if os.path.exists(iiee_file) == False:
     for f in files:
         print(f)
@@ -54,9 +56,12 @@ if os.path.exists(iiee_file) == False:
         # calc iiee scores
         temp = npb.icecalc.iiee(DAT, area, ICEOBS, persistence = True, var = var)
         exp_dat.append(temp)
-    print('concating data')
-    ds = xr.concat(exp_dat, dim = 'time')
-    # save data
-    ds.to_netcdf(iiee_file)
+    if (len(files) > 1 ):
+        print('concating data')
+        ds = xr.concat(exp_dat, dim = 'time')
+        # save data
+        ds.to_netcdf(iiee_file)
+    else:
+        temp.to_netcdf(iiee_file)
     print('SAVED: ', iiee_file)
 

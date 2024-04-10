@@ -5,7 +5,7 @@ EXP=${2}
 ENS_MEMBERS=${3}
 SCRIPT_DIR=$(dirname "$0")
 
-source ${SCRIPT_DIR}/directories.sh ${EXP}
+source ${SCRIPT_DIR}/directories.sh ${EXP} ${dtg}
 source ${SCRIPT_DIR}/functions.sh
 
 if [[ ${SRC_DIR} == *scratch* ]]; then

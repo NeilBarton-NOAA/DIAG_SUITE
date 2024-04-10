@@ -1,14 +1,15 @@
 #!jinja2
 ########################
 # Items that may need changed
-{% set EXPS = 'EP5r1' %}
-{% set DATES = 'R8/2018-01-04T00/P7D, R8/2018-08-02T00/P7D' %}
+{% set EXPS = 'EP5' %}
+{% set DATES = 'R8/2018-01-03T00/P7D, R8/2018-08-01T00/P7D' %}
 {% set AICE_VAR = "aice_d" %}
 {% set ENS_MEMBERS = 10 %}
-{% set PARSE_DATA = True %}
+{% set PARSE_DATA = False %}
 {% set MAIL_ADDRESS = "neil.barton@noaa.gov" %}
 
 ########################
+# DATES
 # EP miniset            'R8/2018-01-03T00/P7D, R8/2018-08-01T00/P7D'
 # EPr miniset           'R8/2018-01-04T00/P7D, R8/2018-08-02T00/P7D'
 # GFS Dates             'R29/2019-12-03T00/P3D, R31/2020-06-01T00/P3D'
@@ -169,7 +170,7 @@ rm -r ${CYLC_TASK_WORK_DIR}
         inherit = CALC_ICE_EXTENT
         script = """
         EXP=${CYLC_TASK_PARAM_experiment}
-        source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/directories.sh ${EXP}
+        source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/directories.sh ${EXP} ${DTG}
         ${CYLC_SUITE_DEF_PATH}/SCRIPTS/CALC_ice_extent.py -d ${TOPDIR_OUTPUT}/${EXP} -v ${AICE_VAR}
         """
         [[[directives]]]
@@ -177,7 +178,7 @@ rm -r ${CYLC_TASK_WORK_DIR}
             #--qos = debug
    [[plot_ice_extent]]
         script = """
-        source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/directories.sh HR1
+        source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/directories.sh HR1 ${DTG}
         ${CYLC_SUITE_DEF_PATH}/SCRIPTS/PLOT_ice_extent.py -d ${TOPDIR_OUTPUT} -e ${EXPS} -v ${AICE_VAR} -fd ${TOPDIR_FIGURES}
         """
    [[INTERP_ICE]]
@@ -185,7 +186,7 @@ rm -r ${CYLC_TASK_WORK_DIR}
         inherit = INTERP_ICE
         script = """
         EXP=${CYLC_TASK_PARAM_experiment}
-        source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/directories.sh ${EXP}
+        source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/directories.sh ${EXP} ${DTG}
         ${CYLC_SUITE_DEF_PATH}/SCRIPTS/INTERP_iiee.py -d ${TOPDIR_OUTPUT}/${EXP} -v ${AICE_VAR}
         """
         [[[directives]]]
@@ -195,14 +196,15 @@ rm -r ${CYLC_TASK_WORK_DIR}
         inherit = CALC_IIEE
         script = """
         EXP=${CYLC_TASK_PARAM_experiment}
-        source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/directories.sh ${EXP}
+        source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/directories.sh ${EXP} ${DTG}
         ${CYLC_SUITE_DEF_PATH}/SCRIPTS/CALC_iiee.py -d ${TOPDIR_OUTPUT}/${EXP} -v ${AICE_VAR}
         """
         [[[directives]]]
             --time = 08:00:00
    [[plot_iiee]]
         script = """
-        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/PLOT_iiee.py -d ${TOP_DIR_OUTPUT} -v ${AICE_VAR} -e ${EXPS}
+        source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/directories.sh HR1 ${DTG}
+        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/PLOT_iiee.py -d ${TOPDIR_OUTPUT} -v ${AICE_VAR} -e ${EXPS} -fd ${TOPDIR_FIGURES}
         """
    [[MAPS_ICE_CON]]
    [[maps_ice_concentration<poles><experiment>]]
@@ -210,7 +212,7 @@ rm -r ${CYLC_TASK_WORK_DIR}
         script = """
         EXP=${CYLC_TASK_PARAM_experiment}
         POLE=${CYLC_TASK_PARAM_poles}
-        source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/directories.sh ${EXP}
+        source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/directories.sh ${EXP} ${DTG}
         ${CYLC_SUITE_DEF_PATH}/SCRIPTS/CICE_maps.py -d ${TOPDIR_OUTPUT}/${EXP} -e ${EXP} -v ${AICE_VAR} -p ${POLE} -fd ${TOPDIR_FIGURES}
         """
         [[[directives]]]

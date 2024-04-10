@@ -1,7 +1,7 @@
 #!/bin/bash
 set -xu
 SCRIPT_DIR=${SCRIPT_DIR:-$(dirname "$0")}
-source ${SCRIPT_DIR}/directories.sh
+source ${SCRIPT_DIR}/directories.sh 
 outdir=${TOPDIR_OBS}
 
 name=ice_extent
