@@ -5,7 +5,7 @@ var=${2}
 EXP=${3} 
 
 SCRIPT_DIR=$(dirname "$0")
-source ${SCRIPT_DIR}/directories.sh ${EXP} ${dtg}
+source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${dtg}
 
 out_file=${TOPDIR_OUTPUT}/${EXP}/${var}_${dtg}.nc
 
