@@ -4,7 +4,7 @@ dtg=${1}
 EXP=${2}
 ENS_MEMBERS=${3}
 SCRIPT_DIR=$(dirname "$0")
-
+export HSI=T
 source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${dtg}
 source ${SCRIPT_DIR}/functions.sh
 

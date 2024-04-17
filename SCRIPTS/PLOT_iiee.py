@@ -37,7 +37,8 @@ tdir = args.dirs[0]
 exps = args.exps
 var = args.var[0]
 save_dir = args.figuredir[0]
-obs_types = ['climatology', 'cdr_seaice_conc', 'cdr_seaice_conc_persistence']
+obs_types = ['cdr_seaice_conc', 'cdr_seaice_conc_persistence', 'cdr_seaice_conc_climatology']
+#obs_types = ['cdr_seaice_conc', 'cdr_seaice_conc_persistence'] #, 'cdr_seaice_conc_climatology']
 #'nsidc_nt_seaice_conc', 
 #'nsidc_bt_seaice_conc', 
 #'cdr_seaice_conc_persistence', 
@@ -60,11 +61,11 @@ for i, e in enumerate(exps):
 if len(DAT) > 1:
     for i, ds in enumerate(DAT):
         c_time = ds['time']
-        print(c_time)
         if i == 0: 
             a_time = c_time
         else: 
             times = np.array(list(set(c_time.values) & set(a_time.values)))
+    times = DAT[0]['time'].sel(time = times)
 else:
     times = DAT[0]['time']
 
@@ -101,6 +102,8 @@ for pole in ['north', 'south']:
     npb.plot.iiee.times = m_times 
     npb.plot.iiee.title = 'Summer' 
     npb.plot.iiee.create() 
+
+
     # if all months exist
     #if len(months) == 12: 
 #       iiee_min_per_month.create() 

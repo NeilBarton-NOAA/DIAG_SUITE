@@ -2,58 +2,59 @@ import calendar
 import numpy as np
 import matplotlib.pyplot as plt
 
+colors = ['maroon','blue','darkgreen']
 class ice_extent(object):
     pole = 'north'
     save_dir = './'
     @classmethod
     def create(cls):
         # plot model data with tau
+        name = 'ice_extent_' + cls.title.replace(' ','_') + '_' 
         for i, ds in enumerate(cls.dats):
             if cls.times.size == 1:
                 dat = ds['extent'].sel(time = cls.times, hemisphere = cls.pole)
             else:
                 dat = ds['extent'].sel(time = cls.times, hemisphere = cls.pole).mean('time')
             if 'member' in dat.dims:
-                plt.plot(dat['tau'].values, dat.mean('member').values, linewidth = 2.0, label = ds.test_name )
-                plt.fill_between(dat['tau'].values, dat.min('member').values, dat.max('member').values, alpha = 0.5)
+                plt.plot(dat['tau'].values, dat.mean('member').values, color = colors[i], linewidth = 2.0, label = ds.test_name )
+                plt.fill_between(dat['tau'].values, dat.min('member').values, dat.max('member').values, color = colors[i], alpha = 0.5)
             else:
-                dat.plot(linewidth = 2.0, label = text)
-            name = 'ice_extent_' + cls.title.replace(' ','_') + '_' + \
-                    ds.test_name.replace(':', '').replace(' ','').replace('/','') + '_'
-            # observations; get times for obs
-            last_tau = int(ds['tau'][-1].values)
-            styles = ['-','--']
-            for j, obs in enumerate(cls.obss):
-                if cls.times.size == 1:
-                    t_last = cls.times + np.timedelta64(last_tau, 'D')
-                    ob = obs['extent'].sel(time = slice(cls.times, t_last), hemisphere = cls.pole).values
-                else:
-                    # loop over times
-                    ob = []
-                    for t in cls.times:
-                        t_last = t + np.timedelta64(last_tau, 'D')
-                        ob.append(obs['extent'].sel(time = slice(t, t_last), hemisphere = cls.pole).values)
-                    ob = np.mean(np.array(ob), axis = 0)
-                try:
-                    text = obs.test_name
-                except:
-                    text = 'Obs'
-                plt.plot(np.arange(0, ob.size, 1), ob, color = 'k', linestyle = styles[j], linewidth = 2.0, label = text)
-                if j != (len(cls.obss) - 1):
-                    name = name + text.replace(':', '').replace(' ','').replace('/','') + '_'
-                else:
-                    name = name + text.replace(':', '').replace(' ','').replace('/','')
-            fig_name = cls.save_dir + '/' + cls.pole[0].upper() + 'H_' + name + '.png'
-            plt.legend(frameon = False)
-            plt.xlim(int(ds['tau'][0].values), int(ds['tau'][-1].values))
-            plt.xlabel('Forecast Day')
-            plt.ylabel(cls.pole[0].upper() + 'H Sea Ice Extent')
-            plt.title(cls.pole[0].upper() + 'H Sea Ice Extent: ' + cls.title)
-            plt.show()
-            plt.savefig(fig_name, bbox_inches = 'tight')
-            print('SAVED:', fig_name)
-            plt.close()
-            #exit(1)
+                dat.plot(linewidth = 2.0, color = colors[i], label = ds.test_name)
+            name = name + ds.test_name.replace(':', '').replace(' ','').replace('/','') + '_'
+        # observations; get times for obs
+        last_tau = int(ds['tau'][-1].values)
+        styles = ['-','--']
+        for j, obs in enumerate(cls.obss):
+            if cls.times.size == 1:
+                t_last = cls.times + np.timedelta64(last_tau, 'D')
+                ob = obs['extent'].sel(time = slice(cls.times, t_last), hemisphere = cls.pole).values
+            else:
+                # loop over times
+                ob = []
+                for t in cls.times:
+                    t_last = t + np.timedelta64(last_tau, 'D')
+                    ob.append(obs['extent'].sel(time = slice(t, t_last), hemisphere = cls.pole).values)
+                ob = np.mean(np.array(ob), axis = 0)
+            try:
+                text = obs.test_name
+            except:
+                text = 'Obs'
+            plt.plot(np.arange(0, ob.size, 1), ob, color = 'k', linestyle = styles[j], linewidth = 2.0, label = text)
+            if j != (len(cls.obss) - 1):
+                name = name + text.replace(':', '').replace(' ','').replace('/','') + '_'
+            else:
+                name = name + text.replace(':', '').replace(' ','').replace('/','')
+        fig_name = cls.save_dir + '/' + cls.pole[0].upper() + 'H_' + name + '.png'
+        plt.legend(frameon = False)
+        plt.xlim(int(ds['tau'][0].values), int(ds['tau'][-1].values))
+        plt.xlabel('Forecast Day')
+        plt.ylabel(cls.pole[0].upper() + 'H Sea Ice Extent')
+        plt.title(cls.pole[0].upper() + 'H Sea Ice Extent: ' + cls.title)
+        plt.savefig(fig_name, bbox_inches = 'tight')
+        print('SAVED:', fig_name)
+        plt.show()
+        plt.close()
+        #exit(1)
 
 def ice_extent_imshowdiff(DAT1, DAT2, pole = 'north'):
     dat_plot = []
@@ -63,7 +64,6 @@ def ice_extent_imshowdiff(DAT1, DAT2, pole = 'north'):
     except:
         taus = DAT2['tau'].values
     for m in np.arange(12) + 1:
-    #for m in [8]: #np.arange(1,13):
         dat = []
         y_label.append(calendar.month_abbr[m])
         d1_time = DAT1['time'].isel(time = DAT1['time'].dt.month.isin([m]))
@@ -143,27 +143,36 @@ class iiee(object):
     @classmethod
     def create(cls):
         exp_title = ''
-        for dat in cls.DATS:
-            exp_title = exp_title + dat.test_name + '_'
-            for ob in cls.OBS_TYPES:
-                print(ob)
-                if cls.times.size == 1:
-                    data = dat['iiee'].sel(obs_type = ob, pole = cls.pole, time = cls.times)
-                else:
-                    data = dat['iiee'].sel(obs_type = ob, pole = cls.pole, time = cls.times).mean('time')
-                label = dat.test_name + ' vs '
-                if 'ice_con' in ob:
-                    if 'persistence' in ob:
-                        label = label + 'Persistence: ' + ob.split('_')[0].upper() 
+        for j, ob in enumerate(cls.OBS_TYPES):
+            for i, dat in enumerate(cls.DATS):
+                if dat.test_name not in exp_title:
+                    exp_title = exp_title + dat.test_name + '_'
+                if (i == 0) or (ob.split('_')[-1] == 'conc'):
+                    if cls.times.size == 1:
+                        data = dat['iiee'].sel(obs_type = ob, pole = cls.pole, time = cls.times)
                     else:
+                        data = dat['iiee'].sel(obs_type = ob, pole = cls.pole, time = cls.times).mean('time')
+                    label = dat.test_name + ' vs '
+                    if 'persistence' in ob:
+                        print(ob)
+                        label = 'Persistence vs Obs: ' + ob.split('_')[0].upper()
+                        style = ':'
+                        c = 'k'
+                    elif 'climatology' in ob:
+                        print(ob)
+                        label = 'Climatology vs Obs: ' + ob.split('_')[0].upper()
+                        style = '--'
+                        c = 'k'
+                    else:
+                        print(dat.test_name, ob)
                         label = label + 'Obs: ' + ob.split('_')[0].upper() 
-                else:
-                    label = label + ob.capitalize()
-                if 'member' in data.dims:
-                    plt.plot(data['tau'].values, data.mean('member').values, linewidth = 2.0, label = label )
-                    plt.fill_between(data['tau'].values, data.min('member').values, data.max('member').values, alpha = 0.5)
-                else:
-                    data.plot(linewidth = 2.0, label = label)
+                        style = '-'
+                        c = colors[i]
+                    if 'member' in data.dims:
+                        plt.plot(data['tau'].values, data.mean('member').values, linewidth = 2.0, color = c, linestyle = style, label = label )
+                        plt.fill_between(data['tau'].values, data.min('member').values, data.max('member').values, color = c, alpha = 0.5)
+                    else:
+                        data.plot(linewidth = 2.0, color = c, linestyle = style, label = label)
         if cls.pole == 'north':
             t = 'Arctic '
         elif cls.pole == 'south':
@@ -171,11 +180,12 @@ class iiee(object):
         plt.title(t + cls.title)
         plt.ylabel('IIEE')
         plt.xlabel('Forecast Day')
-        plt.legend(frameon = False)
+        extra = plt.legend(bbox_to_anchor=(1.0, 0.9), frameon = False)
         fig_name = cls.save_dir + '/' + cls.pole[0].upper() + 'H_iiee_' + exp_title + cls.title.replace(' ','').replace(':','').replace('/','') + '.png'
-        plt.savefig(fig_name, bbox_inches = 'tight')
+        plt.savefig(fig_name, bbox_extra_artists = (extra,), bbox_inches = 'tight')
         print('SAVED:', fig_name)  
         #plt.show()
+        plt.close()
                
 #class iiee_min_per_month(object): 
 #    e = e.replace(',','').strip()

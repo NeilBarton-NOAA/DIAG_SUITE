@@ -1,5 +1,5 @@
 #!/bin/sh
-set -u
+set -ux
 dtg=${1}
 var=${2}
 EXP=${3}
@@ -7,7 +7,6 @@ ENS_MEMBERS=${4}
 member=$(printf "%02d" ${4})
 
 SCRIPT_DIR=$(dirname "$0")
-export HSI=F
 source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${dtg}
 source ${SCRIPT_DIR}/functions.sh ${EXP}
 
@@ -48,7 +47,7 @@ if [[ ! -f ${in_file} ]]; then
 fi
 tau=000
 out_tau_file=${TOPDIR_OUTPUT}/${EXP}/TEMP/${dtg}/CICE_${dtg}_M${member}_${tau}.nc
-CICE_PARSE ${in_file} ${out_tau_file} ${var}
+CICE_PARSE ${in_file} ${out_tau_file} ${var} ${ENS_MEMBERS}
 (( $? != 0 )) && exit 1
 file_tau_list=${file_tau_list}' '${out_tau_file}
 
@@ -71,15 +70,13 @@ for f in ${files}; do
         exit 1
     fi
     out_tau_file=${TOPDIR_OUTPUT}/${EXP}/TEMP/${dtg}/CICE_${dtg}_M${member}_${tau}.nc
-    CICE_PARSE ${f} ${out_tau_file} ${var}
+    CICE_PARSE ${f} ${out_tau_file} ${var} ${ENS_MEMBERS}
     (( $? != 0 )) && exit 1
     file_tau_list=${file_tau_list}' '${out_tau_file}
 done
 
 ncecat -u tau ${file_tau_list} ${out_file}
 (( $? != 0 )) && exit 1
-ncap2 -s 'time(:)={"2018-01-24T00:00:00.000000000"}' aice_d_2018012400.nc out.nc
-exit 1
 
 rm ${file_tau_list}
 rm -r ${TOPDIR_OUTPUT}/${EXP}/TEMP/${dtg}/CICE_${dtg}_M${member}_???.nc

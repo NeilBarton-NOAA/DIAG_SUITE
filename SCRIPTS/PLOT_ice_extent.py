@@ -50,11 +50,11 @@ for exp in exps:
 if len(DAT) > 1:
     for i, ds in enumerate(DAT):
         c_time = ds['time']
-        print(c_time)
         if i == 0: 
             a_time = c_time
         else: 
             times = np.array(list(set(c_time.values) & set(a_time.values)))
+    times = DAT[0]['time'].sel(time = times)
 else:
     times = DAT[0]['time']
 
@@ -96,7 +96,6 @@ for pole in ['north', 'south']:
     npb.plot.ice_extent.times = m_times 
     npb.plot.ice_extent.title = 'Summer' 
     npb.plot.ice_extent.create() 
-
 
 ############
 # plot monthly per tau bias heat plots

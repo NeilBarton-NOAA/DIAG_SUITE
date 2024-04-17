@@ -11,7 +11,8 @@ nfiles=$(ls ${local_ice_dir}/*nc 2>/dev/null | wc -l )
 CORRECT=F
 if (( ${nfiles} >= ${expected_files} )); then
     #check size of files
-    SC=$( ls -l ${dir} | grep -v iceic | grep -v .ic.nc | awk '{print $5}' | sort -u | wc -l )
+    echo "Checking if Size of Files is the Same:", ${dir} , ${file_search}
+    SC=$( ls -l ${dir}/${file_search} | awk '{print $5}' | sort -u | wc -l )
     if (( ${SC} == 2 )); then
         SIZE_CHECK=T
     else
@@ -42,6 +43,7 @@ CICE_PARSE(){
 in_file=${1}
 out_tau_file=${2}
 var=${3}
+ENS_MEMBERS=${4}
 mkdir -p $( dirname ${out_tau_file} )
 if (( ${ENS_MEMBERS} > 0 )); then
     temp_file=$( dirname ${out_tau_file})/CICE_VARS_IC_M${member}.nc

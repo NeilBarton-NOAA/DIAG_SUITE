@@ -2,7 +2,7 @@
 set -u
 EXP=${1:-HR1}
 dtg=${2:-${DTG}}
-HSI=${HSI:-T}
+HSI=${HSI:-F}
 SCRIPT_DIR=${SCRIPT_DIR:-$PWD}
 
 # Local Directories, works on hera
@@ -16,7 +16,7 @@ case ${EXP} in
         SRC_DIR="/NCEPDEV/emc-climate/5year/Jiande.Wang/WCOSS2/HR1"
         ;;
     'HR2' )     
-        SRC_DIR="/NCEPDEV/emc-climate/5year/role.ufscpara/*/HR2/*"
+        SRC_DIR="/NCEPDEV/emc-climate/5year/role.ufscpara/*/HR2/*er"
         if [[ ${HSI} == T ]]; then
             hpss_dir=$( hsi -q ls -d ${SRC_DIR}/${dtg}/ 2>&1 | grep year )
             hpss_file=${hpss_dir::-1}/ice.tar
@@ -28,7 +28,7 @@ case ${EXP} in
         file_search="ice[1,2]*nc"
         ;;
     'HR3' )
-        SRC_DIR="/NCEPDEV/emc-climate/5year/role.ufscpara/WCOSS2/HR3a/*"
+        SRC_DIR="/NCEPDEV/emc-climate/5year/role.ufscpara/WCOSS2/HR3a/*er"
         if [[ ${HSI} == T ]]; then
             hpss_dir=$( hsi -q ls -d ${SRC_DIR}/${dtg}/ 2>&1 | grep year )
             hpss_file=${hpss_dir::-1}/ice_6hravg.tar

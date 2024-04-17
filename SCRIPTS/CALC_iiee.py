@@ -31,10 +31,11 @@ var = args.var[0]
 ########################
 # get observations
 ICEOBS = []
-ICEOBS.extend(npb.iceobs.get_icecon_daily_climatology())
 ICEOBS.extend(npb.iceobs.get_icecon_nt())
 ICEOBS.extend(npb.iceobs.get_icecon_bs())
 ICEOBS.extend(npb.iceobs.get_icecon_cdr())
+
+CLIMO = npb.iceobs.get_icecon_daily_climatology()
 
 ########################
 # get model results
@@ -43,18 +44,18 @@ area = xr.open_dataset(f)
 file_search = tdir + '/interp_obs_grids_' + var + '*.nc'
 files = glob.glob(file_search)
 files.sort()
-exp_dat = []
 iiee_file = tdir + '/iiee.nc'
-#if os.path.exists(iiee_file):
-#    print('Removing IIEE file')
-#    os.remove(iiee_file)
-#files = [files[0]]
+if os.path.exists(iiee_file):
+    print('Removing IIEE file')
+    os.remove(iiee_file)
+#files = [files[5]]
+exp_dat = []
 if os.path.exists(iiee_file) == False:
     for f in files:
         print(f)
-        DAT = xr.open_dataset(f) #, combine = 'nested', concat_dim = 'time', decode_times = True)
+        DAT = xr.open_dataset(f)
         # calc iiee scores
-        temp = npb.icecalc.iiee(DAT, area, ICEOBS, persistence = True, var = var)
+        temp = npb.icecalc.iiee(DAT, ICEOBS, CLIMO, var = var)
         exp_dat.append(temp)
     if (len(files) > 1 ):
         print('concating data')
