@@ -9,7 +9,7 @@ file=/NCEPDEV/emc-marine/5year/Neil.Barton/DIAG/OBS/${name}.tar
 
 mkdir -p ${outdir} && cd ${outdir}
 if [[ ! -d ${outdir}/${name} ]]; then
-    htar -xvf ${f_get}
+    htar -xvf ${file}
 else
     echo "${name} files already downloaded"
 fi
