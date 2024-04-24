@@ -32,12 +32,15 @@ parser.add_argument('-p', '--pole', action = 'store', nargs = 1, \
         help="pole to plot")
 parser.add_argument('-fd', '--figuredir', action = 'store', nargs = 1, \
         help="directory of figures")
+parser.add_argument('-od', '--obsdir', action = 'store', nargs = 1, \
+        help="top directory for observations")
 args = parser.parse_args()
 tdir = args.dirs[0]
 exp = args.exp[0]
 var = args.var[0]
 pole = args.pole[0]
 save_dir = args.figuredir[0]
+obs_dir = args.obsdir[0]
 ########################
 # names of variables, may want to move someplace else
 long_name = {
@@ -50,7 +53,7 @@ long_name = {
 
 ########################
 # get observations
-OBS = npb.iceobs.get_icecon_cdr() 
+OBS = npb.iceobs.get_icecon_cdr(obs_dir) 
 p = 0 if pole == 'north' else 1
 
 ########################

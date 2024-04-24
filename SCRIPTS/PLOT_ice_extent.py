@@ -29,11 +29,14 @@ parser.add_argument('-v', '--var', action = 'store', nargs = 1, \
         help="variable to parse")
 parser.add_argument('-fd', '--figuredir', action = 'store', nargs = 1, \
         help="directory of figures")
+parser.add_argument('-od', '--obsdir', action = 'store', nargs = 1, \
+        help="top directory for observations")
 args = parser.parse_args()
 tdir = args.dirs[0]
 exps = args.exps
 var = args.var[0]
 save_dir = args.figuredir[0]
+obs_dir = args.obsdir[0]
 
 ####################################
 # grab ice extent from models
@@ -61,8 +64,8 @@ else:
 ####################################
 # grab ice extent observations
 OBS = []
-OBS.append(npb.iceobs.get_extentobs_NASA())
-OBS.append(npb.iceobs.get_extentobs_bootstrap())
+OBS.append(npb.iceobs.get_extentobs_NASA(obs_dir))
+OBS.append(npb.iceobs.get_extentobs_bootstrap(obs_dir))
 
 ####################################
 # plot month and sea ice extent 

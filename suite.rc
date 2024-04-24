@@ -179,7 +179,7 @@ rm -r ${CYLC_TASK_WORK_DIR}
    [[plot_ice_extent]]
         script = """
         source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/experiment_options.sh HR1 ${DTG}
-        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/PLOT_ice_extent.py -d ${TOPDIR_OUTPUT} -e ${EXPS} -v ${AICE_VAR} -fd ${TOPDIR_FIGURES}
+        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/PLOT_ice_extent.py -d ${TOPDIR_OUTPUT} -e ${EXPS} -v ${AICE_VAR} -fd ${TOPDIR_FIGURES} -od ${TOPDIR_OBS}
         """
    [[INTERP_ICE]]
    [[interp_ice<experiment>]]
@@ -187,7 +187,7 @@ rm -r ${CYLC_TASK_WORK_DIR}
         script = """
         EXP=${CYLC_TASK_PARAM_experiment}
         source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/experiment_options.sh ${EXP} ${DTG}
-        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/INTERP_iiee.py -d ${TOPDIR_OUTPUT}/${EXP} -v ${AICE_VAR}
+        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/INTERP_iiee.py -d ${TOPDIR_OUTPUT}/${EXP} -v ${AICE_VAR} -od ${TOPDIR_OBS}
         """
         [[[directives]]]
             --time = 08:00:00
@@ -197,7 +197,7 @@ rm -r ${CYLC_TASK_WORK_DIR}
         script = """
         EXP=${CYLC_TASK_PARAM_experiment}
         source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/experiment_options.sh ${EXP} ${DTG}
-        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/CALC_iiee.py -d ${TOPDIR_OUTPUT}/${EXP} -v ${AICE_VAR}
+        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/CALC_iiee.py -d ${TOPDIR_OUTPUT}/${EXP} -v ${AICE_VAR} -od ${TOPDIR_OBS}
         """
         [[[directives]]]
             --time = 08:00:00
@@ -213,7 +213,7 @@ rm -r ${CYLC_TASK_WORK_DIR}
         EXP=${CYLC_TASK_PARAM_experiment}
         POLE=${CYLC_TASK_PARAM_poles}
         source ${CYLC_SUITE_DEF_PATH}/SCRIPTS/experiment_options.sh ${EXP} ${DTG}
-        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/CICE_maps.py -d ${TOPDIR_OUTPUT}/${EXP} -e ${EXP} -v ${AICE_VAR} -p ${POLE} -fd ${TOPDIR_FIGURES}
+        ${CYLC_SUITE_DEF_PATH}/SCRIPTS/CICE_maps.py -d ${TOPDIR_OUTPUT}/${EXP} -e ${EXP} -v ${AICE_VAR} -p ${POLE} -fd ${TOPDIR_FIGURES} -od ${TOPDIR_OBS}
         """
         [[[directives]]]
             --time = 08:00:00

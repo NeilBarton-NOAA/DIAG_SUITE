@@ -28,8 +28,8 @@ def parse_noaacdr(files, var, file_name):
     print('wrote:', file_name)
     return obs
 
-def get_extentobs_NASA():
-    ice_dir = '/scratch2/NCEPDEV/stmp3/Neil.Barton/DIAG/OBS/ice_extent/nasateam'
+def get_extentobs_NASA(obs_dir):
+    ice_dir = obs_dir + '/ice_extent/nasateam'
     files = ['gsfc.nasateam.daily.extent.1978-2021.n', 'gsfc.nasateam.daily.extent.1978-2021.s']
     for ii, f in enumerate(files):
         print(ice_dir + '/' + f)
@@ -67,8 +67,8 @@ def get_extentobs_NASA():
     obs = obs.assign_attrs({'test_name': 'OBS-NASA'})
     return obs
 
-def get_extentobs_bootstrap():
-    ice_dir = '/scratch2/NCEPDEV/stmp3/Neil.Barton/DIAG/OBS/ice_extent/bootstrap'
+def get_extentobs_bootstrap(obs_dir):
+    ice_dir = obs_dir + '/ice_extent/bootstrap'
     files = ['gsfc.bootstrap.daily.extent.1978-2021.n', 'gsfc.bootstrap.daily.extent.1978-2021.s']
     for ii, f in enumerate(files):
         print(ice_dir + '/' + f)
@@ -106,13 +106,13 @@ def get_extentobs_bootstrap():
     obs = obs.assign_attrs({'test_name': 'OBS-bootstrap'})
     return obs
 
-def get_thickness():
-    ice_dir = '/scratch2/NCEPDEV/stmp3/Neil.Barton/DIAG/OBS/ICE_THICKNESS'
+def get_thickness(obs_dir):
+    ice_dir = obs_dir + '/ICE_THICKNESS'
     obs = xr.open_mfdataset(ice_dir + '/ice*.nc')
     return obs
 
-def get_icecon_daily_climatology(years = 10):
-    ice_dir = '/scratch2/NCEPDEV/stmp3/Neil.Barton/DIAG/OBS/ice_concentration/noaa_cdr'
+def get_icecon_daily_climatology(obs_dir. years = 10):
+    ice_dir = obs_dir + '/ice_concentration/noaa_cdr'
     variables = ['nsidc_nt_seaice_conc', 'nsidc_bt_seaice_conc', 'cdr_seaice_conc']
     poles = ['north', 'south']
     ob = []
@@ -157,8 +157,8 @@ def get_icecon_daily_climatology(years = 10):
         ob.append(dat)
     return ob[0], ob[1]
 
-def get_icecon_nt():
-    ice_dir = '/scratch2/NCEPDEV/stmp3/Neil.Barton/DIAG/OBS/ice_concentration/noaa_cdr'
+def get_icecon_nt(obs_dir):
+    ice_dir = obs_dir + '/ice_concentration/noaa_cdr'
     var = 'nsidc_nt_seaice_conc'
     poles = ['north', 'south']
     ob = []
@@ -175,8 +175,8 @@ def get_icecon_nt():
         ob.append(obs)
     return ob[0], ob[1]
 
-def get_icecon_bs():
-    ice_dir = '/scratch2/NCEPDEV/stmp3/Neil.Barton/DIAG/OBS/ice_concentration/noaa_cdr'
+def get_icecon_bs(obs_dir):
+    ice_dir = obs_dir + '/ice_concentration/noaa_cdr'
     var = 'nsidc_bt_seaice_conc'
     poles = ['north', 'south']
     ob = []
@@ -193,8 +193,8 @@ def get_icecon_bs():
         ob.append(obs)
     return ob[0], ob[1]
 
-def get_icecon_cdr():
-    ice_dir = '/scratch2/NCEPDEV/stmp3/Neil.Barton/DIAG/OBS/ice_concentration/noaa_cdr'
+def get_icecon_cdr(obs_dir):
+    ice_dir = obs_dir + '/ice_concentration/noaa_cdr'
     var = 'cdr_seaice_conc'
     poles = ['north', 'south']
     ob = []
@@ -211,13 +211,13 @@ def get_icecon_cdr():
         ob.append(obs)
     return ob[0], ob[1]
 
-def get_icecon_nsidc0051():
+def get_icecon_nsidc0051(obs_dir):
     def rename_variable(ds):
         for pv in ['F13_ICECON', 'F17_ICECON']:
             if pv in ds.keys():
                 ds = ds.rename_vars({pv: 'ice_con'})
         return ds
-    ice_dir = '/scratch2/NCEPDEV/stmp3/Neil.Barton/DIAG/OBS/ice_concentration/nsidc-0051'
+    ice_dir = obs_dir + '/ice_concentration/nsidc-0051'
     poles = ['north', 'south']
     ob = []
     for ii, pole in enumerate(poles):
