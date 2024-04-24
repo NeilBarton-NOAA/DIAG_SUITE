@@ -4,6 +4,12 @@ diagnostic tools for ufs/gefs/gfs/sfs
 DEPENDENCIES:
     cylc, python3 (matplotlib, xesmf, xarray, others), nco
 
+USE of CYCL:
+    if this is the first time using cylc, you'll likely need to add a
+    ~/.cylc/global.rc
+    examine and copy ~barton/.cylc/global.rc
+    and change "work directory" and "run directory" to directories in your account
+
 MODULES FOR DEPENDENCIES on hera:
     Must load on command line!
         module use -a ~Neil.Barton/TOOLS/modulefiles
@@ -21,6 +27,11 @@ TO RUN:
         cylc run $NAME
     check to see what is running
         cylc mo $NAME (or cylc mo -r $NAME for only active tasks)
+
+TO ADD MORE EXPERIMENTS:
+    open SCRIPTS/experiment_options.sh
+        and add the options/variables similar to the HR3a  
+    double check the DATES variable in the suite.rc file
 
 OTHER USEFUL CYLC COMMANDS:
     cylc shutdown -k $NAME (shutdown and kill all tasks associated with the suite)

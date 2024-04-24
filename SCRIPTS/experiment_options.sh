@@ -27,7 +27,7 @@ case ${EXP} in
         FPD=8
         file_search="ice[1,2]*nc"
         ;;
-    'HR3' )
+    'HR3a' )
         SRC_DIR="/NCEPDEV/emc-climate/5year/role.ufscpara/WCOSS2/HR3a/*er"
         if [[ ${HSI} == T ]]; then
             hpss_dir=$( hsi -q ls -d ${SRC_DIR}/${dtg}/ 2>&1 | grep year )
