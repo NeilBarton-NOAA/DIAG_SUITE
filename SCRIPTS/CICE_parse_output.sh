@@ -3,7 +3,8 @@ set -ux
 dtg=${1}
 var=${2}
 EXP=${3}
-ENS_MEMBERS=${4}
+MEMBER=${4}
+ENS_MEMBERS=${5}
 member=$(printf "%02d" ${4})
 
 SCRIPT_DIR=$(dirname "$0")
@@ -45,11 +46,13 @@ in_file=$(ls ${src_dir}/iceic*nc 2>/dev/null)
 if [[ ! -f ${in_file} ]]; then
     in_file=$(ls ${src_dir}/*.ic.nc)
 fi
-tau=000
-out_tau_file=${TOPDIR_OUTPUT}/${EXP}/TEMP/${dtg}/CICE_${dtg}_M${member}_${tau}.nc
-CICE_PARSE ${in_file} ${out_tau_file} ${var} ${ENS_MEMBERS}
-(( $? != 0 )) && exit 1
-file_tau_list=${file_tau_list}' '${out_tau_file}
+if [[ -f ${in_file} ]]; then
+    tau=000
+    out_tau_file=${TOPDIR_OUTPUT}/${EXP}/TEMP/${dtg}/CICE_${dtg}_M${member}_${tau}.nc
+    CICE_PARSE ${in_file} ${out_tau_file} ${var} ${ENS_MEMBERS}
+    (( $? != 0 )) && exit 1
+    file_tau_list=${file_tau_list}' '${out_tau_file}
+fi
 
 ############
 # tau files

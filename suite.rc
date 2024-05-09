@@ -1,20 +1,28 @@
 #!jinja2
 ########################
 # Items that may need changed
-{% set EXPS = 'HR2, HR3a' %}
-{% set DATES = 'R29/2019-12-03T00/P3D, R31/2020-06-01T00/P3D' %}
-{% set AICE_VAR = "aice_h" %}
-{% set ENS_MEMBERS = 0 %}
+{% set EXPS = 'EP5r1, EP5r2' %}
+{% set DATES = 'R8/2018-01-04T00/P7D, R8/2018-08-02T00/P7D' %}
+{% set AICE_VAR = "aice_d" %}
+{% set ENS_MEMBERS = 10 %}
 {% set PARSE_DATA = True %}
 {% set MAIL_ADDRESS = "***" %}
 
 ########################
-# DATES
+# DATES:
 # EP miniset            'R8/2018-01-03T00/P7D, R8/2018-08-01T00/P7D'
 # EPr miniset           'R8/2018-01-04T00/P7D, R8/2018-08-02T00/P7D'
 # GFS Dates             'R29/2019-12-03T00/P3D, R31/2020-06-01T00/P3D'
 # GFS/HR Hurricane         'R81/2020-09-01T00/P1D'
 # GDAS dates from Lydia 'R13/2021-07-03T00/P1D'
+########################
+# AICE_VAR:
+# GEFS                  aice_d
+# GFS                   aice_h
+########################
+# ENS_MEMBERS
+# GEFS                  10
+# GFS                   0
 
 ####################################
 # define suite

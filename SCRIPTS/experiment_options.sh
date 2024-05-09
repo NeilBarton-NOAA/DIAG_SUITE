@@ -10,6 +10,7 @@ TOPDIR_OBS=/scratch2/NCEPDEV/stmp3/${USER}/DIAG/OBS
 TOPDIR_OUTPUT=/scratch2/NCEPDEV/stmp3/${USER}/DIAG
 TOPDIR_FIGURES=/scratch2/NCEPDEV/stmp3/${USER}/FIGURES
 
+member=${member:-0}
 # Location of based on experiment
 case ${EXP} in 
     'HR1' )     
@@ -59,6 +60,15 @@ case ${EXP} in
         local_ice_dir=${local_download_dir}/ice 
         hpss_file=${SRC_DIR}/${dtg:0:4}/${dtg:0:6}/${dtg:0:8}/gefs.${dtg:0:8}_${dtg:8:10}.atmos.ice.tar 
         FL=35 # Forecast Length is 35 days
+        file_search="iceh*${member}.nc"
+        ;;
+    'EP5r2')
+	    SRC_DIR='/NCEPDEV/emc-ensemble/2year/Bing.Fu/ep5r2'
+        local_download_dir=${TOPDIR_OUTPUT}/${EXP}/${dtg:0:8}
+        local_ice_dir=${local_download_dir}/ice 
+        hpss_file=${SRC_DIR}/${dtg:0:4}/${dtg:0:6}/${dtg:0:8}/gefs.${dtg:0:8}_${dtg:8:10}.atmos.ice.tar
+        FL=35 # Forecast Length is 35 days
+        file_search="iceh*${member}.nc"
         ;;
     'DA_TEST' )      
         SRC_DIR='/scratch1/NCEPDEV/stmp2/Lydia.B.Stefanova/DA'
