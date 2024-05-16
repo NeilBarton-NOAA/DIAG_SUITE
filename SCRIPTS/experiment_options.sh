@@ -54,6 +54,22 @@ case ${EXP} in
         FL=35 # Forecast Length is 35 days
         file_search="iceh*${member}.nc"
         ;;
+     'EP5d')
+        SRC_DIR='/NCEPDEV/emc-climate/1year/Lydia.B.Stefanova/WCOSS2/EP5d'
+        local_download_dir=${TOPDIR_OUTPUT}/${EXP}/${dtg:0:8}
+        local_ice_dir=${local_download_dir}/ice
+        hpss_file=${SRC_DIR}/${dtg:0:4}/${dtg:0:6}/${dtg:0:8}/gefs.${dtg:0:8}_${dtg:8:10}.atmos.ice.tar
+        FL=35 # Forecast Length is 35 days
+        file_search="iceh*${member}.nc"
+	;;
+     'EP5dd')
+        SRC_DIR='/NCEPDEV/emc-climate/1year/Lydia.B.Stefanova/WCOSS2/EP5d'
+        local_download_dir=${TOPDIR_OUTPUT}/${EXP}/${dtg:0:8}
+        local_ice_dir=${local_download_dir}/ice
+        hpss_file=${SRC_DIR}/${dtg:0:4}/${dtg:0:6}/${dtg:0:8}/gefs.${dtg:0:8}_${dtg:8:10}.atmos.ice.tar
+        FL=35 # Forecast Length is 35 days
+        file_search="iceh*${member}.nc"
+	;;
     'EP5r1')    
         SRC_DIR='/NCEPDEV/emc-ensemble/2year/Bing.Fu/ep5r1' 
         local_download_dir=${TOPDIR_OUTPUT}/${EXP}/${dtg:0:8}
