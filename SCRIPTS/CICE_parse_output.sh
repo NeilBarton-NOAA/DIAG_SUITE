@@ -78,4 +78,3 @@ rm ${file_tau_list}
 rm -r ${TOPDIR_OUTPUT}/${EXP}/TEMP/${dtg}/CICE_${dtg}_M${member}_???.nc
 echo "CREATED:" ${out_file}
 echo " "
-
