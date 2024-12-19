@@ -8,7 +8,7 @@ export HSI=T
 source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${dtg}
 source ${SCRIPT_DIR}/functions.sh
 
-if [[ ${SRC_DIR} == *scratch* ]]; then
+if [[ ${SRC_DIR} == "local" ]]; then
     echo 'FILES already on local machine'
     exit 0
 fi
@@ -34,3 +34,4 @@ if [[ ${FILES_PRESENT} == F ]]; then
 else
     echo "files already downloaded"
 fi
+exit 1

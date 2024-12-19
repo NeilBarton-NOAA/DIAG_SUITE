@@ -3,19 +3,14 @@ set -ux
 dtg=${1}
 var=${2}
 EXP=${3}
-MEMBER=${4}
-ENS_MEMBERS=${5}
+ENS_MEMBERS=${4}
 member=$(printf "%02d" ${4})
 
 SCRIPT_DIR=$(dirname "$0")
 source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${dtg}
 source ${SCRIPT_DIR}/functions.sh ${EXP}
 
-if [[ ${SRC_DIR} == *scratch* ]]; then
-    src_dir=${SRC_DIR}
-else
-    src_dir=${local_ice_dir}
-fi
+src_dir=${local_ice_dir}
 
 if (( ${ENS_MEMBERS} > 0 )); then
     out_file=${TOPDIR_OUTPUT}/${EXP}/${var}_${member}_${dtg}.nc
@@ -46,13 +41,11 @@ in_file=$(ls ${src_dir}/iceic*nc 2>/dev/null)
 if [[ ! -f ${in_file} ]]; then
     in_file=$(ls ${src_dir}/*.ic.nc)
 fi
-if [[ -f ${in_file} ]]; then
-    tau=000
-    out_tau_file=${TOPDIR_OUTPUT}/${EXP}/TEMP/${dtg}/CICE_${dtg}_M${member}_${tau}.nc
-    CICE_PARSE ${in_file} ${out_tau_file} ${var} ${ENS_MEMBERS}
-    (( $? != 0 )) && exit 1
-    file_tau_list=${file_tau_list}' '${out_tau_file}
-fi
+tau=000
+out_tau_file=${TOPDIR_OUTPUT}/${EXP}/TEMP/${dtg}/CICE_${dtg}_M${member}_${tau}.nc
+CICE_PARSE ${in_file} ${out_tau_file} ${var} ${ENS_MEMBERS}
+(( $? != 0 )) && exit 1
+file_tau_list=${file_tau_list}' '${out_tau_file}
 
 ############
 # tau files

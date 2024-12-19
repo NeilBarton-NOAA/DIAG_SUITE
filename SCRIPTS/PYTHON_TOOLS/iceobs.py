@@ -111,7 +111,7 @@ def get_thickness(obs_dir):
     obs = xr.open_mfdataset(ice_dir + '/ice*.nc')
     return obs
 
-def get_icecon_daily_climatology(obs_dir, years = 10):
+def get_icecon_daily_climatology(obs_dir. years = 10):
     ice_dir = obs_dir + '/ice_concentration/noaa_cdr'
     variables = ['nsidc_nt_seaice_conc', 'nsidc_bt_seaice_conc', 'cdr_seaice_conc']
     poles = ['north', 'south']
