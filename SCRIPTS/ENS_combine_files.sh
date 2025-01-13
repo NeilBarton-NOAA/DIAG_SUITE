@@ -14,14 +14,11 @@ if [[ -f ${out_file} ]]; then
     echo ""
     exit 0
 fi
-<<<<<<< Updated upstream
 
 files=$( ls ${TOPDIR_OUTPUT}/${EXP}/${var}_*_${dtg}.nc )
 ncecat -u member ${files} ${out_file}
 (( $? != 0 )) && exit 1
 rm ${files}
-=======
->>>>>>> Stashed changes
 
 #mean
 #ncra ${files} ${out_file}

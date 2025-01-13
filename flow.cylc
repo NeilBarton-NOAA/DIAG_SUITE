@@ -1,15 +1,9 @@
 #!jinja2
 ########################
 # Items that may need changed
-<<<<<<< Updated upstream:flow.cylc
 {% set EXPS = 'SFS' %}
 {% set DATES = 'R5/1994-05-01T00/P1Y, R5/1994-11-01T00/P1Y' %}
 {% set AICE_VAR = "aice_h" %}
-=======
-{% set EXPS = 'EP4' %}
-{% set DATES = 'R2/2018-08-15T00/P7D' %}
-{% set AICE_VAR = "aice_d" %}
->>>>>>> Stashed changes:suite.rc
 {% set ENS_MEMBERS = 10 %}
 {% set PARSE_DATA = True %}
 
@@ -43,12 +37,8 @@
 [scheduling]
     initial cycle point = {{ ICP }}
     final cycle point = {{ FCP }}
-<<<<<<< Updated upstream:flow.cylc
     runahead limit = P5
-    
-=======
     max active cycle points = 1
->>>>>>> Stashed changes:suite.rc
     [[queues]]
         [[[default]]]
             limit = 42
@@ -96,15 +86,11 @@ unset ESMFMKFILE
             EXPS                = {{ EXPS }}
             ENS_MEMBERS         = {{ ENS_MEMBERS }}
         [[[job]]]
-<<<<<<< Updated upstream:flow.cylc
-        
-=======
             #execution retry delays = 3*PT10M
             batch system = slurm
         #[[[events]]]
         #    failed handler  = cylc email-task
         #    submission failed handler = cylc email-task
->>>>>>> Stashed changes:suite.rc
         [[[directives]]]
             --account = marine-cpu
             --nasks = 1
