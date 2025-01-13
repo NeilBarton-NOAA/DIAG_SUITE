@@ -1,6 +1,6 @@
 #!/bin/sh
 set -u
-EXP=${1:-HR1}
+EXP=${1:-EP6}
 dtg=${2:-${DTG}}
 HSI=${HSI:-F}
 SCRIPT_DIR=${SCRIPT_DIR:-$PWD}

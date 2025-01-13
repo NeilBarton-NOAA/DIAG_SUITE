@@ -6,9 +6,9 @@ DEPENDENCIES:
 
 USE of CYCL:
     if this is the first time using cylc, you'll likely need to add a
-    ~/.cylc/global.rc
-    examine and copy ~barton/.cylc/global.rc
-    and change "work directory" and "run directory" to directories in your account
+    ~/.cylc/flow/global.cylc
+    examine and copy ~Neil.Barton/.cylc/flow/global.cylc
+    and define ${CYLC_WORKDIR} to a space in your account
 
 MODULES FOR DEPENDENCIES on hera:
     Must load on command line!
@@ -20,13 +20,12 @@ TO RUN:
     open suite.rc and edit top parameters if needed
         e.g.: MODEL, MAIL_ADDRESS, EXPS
     validate suite
-        cylc va suite.rc
-    register suite
-        cylc reg $NAME (NAME is arbitrary) 
-    run suite
-        cylc run $NAME
+        cylc va $PWD (Directory of flow.cylc file)
+    register suite, validate, and run suite
+        cylc vip -n $NAME $PWD/flow.cylc
+        ($NAME is arbitrary, $PWD is the directory of the flow.cycl file)
     check to see what is running
-        cylc mo $NAME (or cylc mo -r $NAME for only active tasks)
+        cylc tui $NAME 
 
 TO ADD MORE EXPERIMENTS:
     open SCRIPTS/experiment_options.sh
@@ -34,5 +33,3 @@ TO ADD MORE EXPERIMENTS:
     double check the DATES variable in the suite.rc file
 
 OTHER USEFUL CYLC COMMANDS:
-    cylc shutdown -k $NAME (shutdown and kill all tasks associated with the suite)
-    cylc reload $NAME (if changes are made in the .rc file, the suite most be validated and reloaded for these changes to take effect)
