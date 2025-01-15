@@ -3,7 +3,7 @@
 # Items that may need changed
 {% set EXPS = 'EP6' %}
 {% set DATES = 'R8/2018-01-04T00/P7D, R8/2018-08-02T00/P7D' %}
-{% set AICE_VAR = "aice_h" %}
+{% set AICE_VAR = "aice_d" %}
 {% set ENS_MEMBERS = 10 %}
 {% set PARSE_DATA = True %}
 
@@ -37,7 +37,7 @@
 [scheduling]
     initial cycle point = {{ ICP }}
     final cycle point = {{ FCP }}
-    runahead limit = P5
+    runahead limit = P0
     [[queues]]
         [[[default]]]
             limit = 42
@@ -110,7 +110,12 @@ unset ESMFMKFILE
     [[grab_sea_ice_extents]]
         inherit = GRAB_OBS
         script = """
-        ${SCRIPT_DIR}/GRAB_ice_extent_from_hpss.sh 
+        ${SCRIPT_DIR}/GRAB_obs_from_hpss.sh ice_extent 
+        """
+    [[grab_sea_ice_concentrations]]
+        inherit = GRAB_OBS
+        script = """
+        ${SCRIPT_DIR}/GRAB_obs_from_hpss.sh ice_concentration
         """
 
 ################################################
@@ -141,6 +146,7 @@ unset ESMFMKFILE
 ################################################
 # diagnostics
    [[CALC_ICE_EXTENT]]
+        platform = slurm_local
    [[calc_ice_extent<experiment>]]
         inherit = CALC_ICE_EXTENT
         script = """
@@ -157,6 +163,7 @@ unset ESMFMKFILE
         ${SCRIPT_DIR}/PLOT_ice_extent.py -d ${TOPDIR_OUTPUT} -e ${EXPS} -v ${AICE_VAR} -fd ${TOPDIR_FIGURES} -od ${TOPDIR_OBS}
         """
    [[INTERP_ICE]]
+        platform = slurm_local
    [[interp_ice<experiment>]]
         inherit = INTERP_ICE
         script = """

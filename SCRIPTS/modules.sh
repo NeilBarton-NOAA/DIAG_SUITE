@@ -1,6 +1,6 @@
 #!/bin/sh
 machine=$(uname -n)
-if [[ ${machine:0:3} == hfe ]]; then
+if [[ ${machine:0:3} == hfe || ${machine} == h*[cm]* ]]; then
     machine=hera
 elif [[ ${machine} == hercules* ]]; then
     machine=hercules

@@ -34,4 +34,3 @@ if [[ ${FILES_PRESENT} == F ]]; then
 else
     echo "files already downloaded"
 fi
-exit 1

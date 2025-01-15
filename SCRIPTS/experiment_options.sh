@@ -7,8 +7,8 @@ SCRIPT_DIR=${SCRIPT_DIR:-$PWD}
 
 # Local Directories, works on hera
 machine=$(uname -n)
-if [[ ${machine:0:3} == hfe ]]; then
-    WORK_DIR=/scratch2/NCEPDEV
+if [[ ${machine:0:3} == hfe || ${machine} == h*[cm]* ]]; then
+    WORK_DIR=/scratch2/NCEPDEV/stmp3
 elif [[ ${machine} == hercules* ]]; then
     WORK_DIR=/work/noaa/marine
 else
@@ -18,6 +18,7 @@ fi
 TOPDIR_OBS=${WORK_DIR}/${USER}/DIAG/OBS
 TOPDIR_OUTPUT=${WORK_DIR}/${USER}/DIAG
 TOPDIR_FIGURES=${WORK_DIR}/${USER}/FIGURES
+file_search="iceh*.???.nc"
 
 # Location of based on experiment
 case ${EXP} in 
@@ -39,7 +40,6 @@ case ${EXP} in
         local_ice_dir=${local_download_dir}/${dtg:0:8}/ice 
         hpss_file=${SRC_DIR}/${dtg:0:4}/${dtg:0:6}/${dtg:0:8}/gefs.${dtg:0:8}_${dtg:8:10}.ice.tar
         FL=35 # Forecast Length is 35 days
-        file_search="iceh*${member}.nc"
         ;;
     'EP4a' )    
         SRC_DIR='/NCEPDEV/emc-ensemble/2year/Bing.Fu/ep4a'
@@ -47,7 +47,6 @@ case ${EXP} in
         local_ice_dir=${local_download_dir}/ice 
         hpss_file=${SRC_DIR}/${dtg:0:4}/${dtg:0:6}/${dtg:0:8}/gefs.${dtg:0:8}_${dtg:8:10}.atmos.ice.tar
         FL=35 # Forecast Length is 35 days
-        file_search="iceh*${member}.nc"
         ;;
     'EP4b' )    
         SRC_DIR='/NCEPDEV/emc-ensemble/2year/Bing.Fu/ep4b'
@@ -55,7 +54,6 @@ case ${EXP} in
         local_ice_dir=${local_download_dir}/${dtg:0:8}/ice 
         hpss_file=${SRC_DIR}/${dtg:0:4}/${dtg:0:6}/${dtg:0:8}/gefs.${dtg:0:8}_${dtg:8:10}.atmos.ice.tar
         FL=35 # Forecast Length is 35 days
-        file_search="iceh*${member}.nc"
         ;;
     'EP5')      
         SRC_DIR='/NCEPDEV/emc-ensemble/2year/Bing.Fu/ep5' 
@@ -63,7 +61,6 @@ case ${EXP} in
         local_ice_dir=${local_download_dir}/ice 
         hpss_file=${SRC_DIR}/${dtg:0:4}/${dtg:0:6}/${dtg:0:8}/gefs.${dtg:0:8}_${dtg:8:10}.atmos.ice.tar
         FL=35 # Forecast Length is 35 days
-        file_search="iceh*${member}.nc"
         ;;
      'EP5d')
         SRC_DIR='/NCEPDEV/emc-climate/1year/Lydia.B.Stefanova/WCOSS2/EP5d'
@@ -71,7 +68,6 @@ case ${EXP} in
         local_ice_dir=${local_download_dir}/ice
         hpss_file=${SRC_DIR}/${dtg:0:4}/${dtg:0:6}/${dtg:0:8}/gefs.${dtg:0:8}_${dtg:8:10}.atmos.ice.tar
         FL=35 # Forecast Length is 35 days
-        file_search="iceh*${member}.nc"
 	    ;;
     'EP5r1')    
         SRC_DIR='/NCEPDEV/emc-ensemble/2year/Bing.Fu/ep5r1' 
@@ -85,7 +81,7 @@ case ${EXP} in
         local_download_dir=${TOPDIR_OUTPUT}/${EXP}/${dtg:0:8}
         local_ice_dir=${local_download_dir}/ice 
         hpss_file=${SRC_DIR}/${dtg:0:4}/${dtg:0:6}/${dtg:0:8}/gefs.${dtg:0:8}_${dtg:8:10}.atmos.ice.tar 
-        FL=48 # Forecast Length is 48 days
+        FL=35 # Forecast Length is 48 days
         ;;
 
 * ) echo 'FATAL: case unknowned ' && exit 1

@@ -11,18 +11,19 @@ nfiles=$(ls ${local_ice_dir}/*nc 2>/dev/null | wc -l )
 CORRECT=F
 if (( ${nfiles} >= ${expected_files} )); then
     #check size of files
-    echo "Checking if Size of Files is the Same:", ${dir} , ${file_search}
+    #echo "Checking if Size of Files is the Same:", ${dir} , ${file_search}
     SC=$( ls -l ${dir}/${file_search} | awk '{print $5}' | sort -u | wc -l )
-    if (( ${SC} == 2 )); then
+    if (( ${SC} == 1 )); then
         SIZE_CHECK=T
     else
         SIZE_CHECK=F
+        echo "files have diferent sizes"
     fi
     #check number per member
     N_CHECK=T
     if (( ${ENS_MEMBERS} > 0 )); then
         n_control=$( ls ${dir}/*.?00.nc | wc -l )
-        for n in $( seq 1 ${ENS_MEMBERS}); do
+        for n in $( seq 1 ${ENS_MEMBERS}); do 
             mem=$(printf "%02d" ${n})
             n_mem=$( ls ${dir}/*.?${mem}.nc | wc -l )
             if (( ${n_control} != ${n_mem} )); then

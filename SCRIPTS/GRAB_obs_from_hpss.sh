@@ -1,10 +1,12 @@
 #!/bin/bash
 set -xu
 SCRIPT_DIR=${SCRIPT_DIR:-$(dirname "$0")}
-source ${SCRIPT_DIR}/experiment_options.sh 
+name=${1}
+name=ice_extent
+name=ice_concentration
+source ${SCRIPT_DIR}/experiment_options.sh EP6 DUMMY 
 outdir=${TOPDIR_OBS}
 
-name=ice_extent
 file=/NCEPDEV/emc-marine/5year/Neil.Barton/DIAG/OBS/${name}.tar
 
 mkdir -p ${outdir} && cd ${outdir}
