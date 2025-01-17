@@ -2,10 +2,11 @@
 set -u
 set +x
 module purge
-module use -a $HOME/TOOLS/modulefiles
-module load conda
 
-#module use -a /contrib/anaconda/modulefiles
+PYTHON_PATH=/scratch2/NCEPDEV/stmp3/Neil.Barton/TOOLS/miniconda3/bin
+PATH=${PYTHON_PATH}:${PATH}
+export PYTHON=${PYTHON_PATH}/python3
+
 module load hpss
 
 module use -a /scratch2/NCEPDEV/nwprod/hpc-stack/libs/hpc-stack/modulefiles/stack

@@ -16,7 +16,7 @@ def parse_noaacdr(files, var, file_name):
     print('not found, parsing data:', file_name)
     files.sort()
     obs = xr.open_mfdataset(files, preprocess = drop_vars, combine = 'nested', concat_dim = 'tdim')
-    obs = obs.rename({'tdim' : 'time'})
+    obs = obs.swap_dims({'tdim' : 'time'})
     geo = xr.open_dataset(files[0])
     obs['lat'] = (geo['latitude'].dims, geo['latitude'].values)
     obs['lon'] = (geo['longitude'].dims, geo['longitude'].values)

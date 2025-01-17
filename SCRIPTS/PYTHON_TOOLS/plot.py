@@ -16,6 +16,7 @@ class ice_extent(object):
             else:
                 dat = ds['extent'].sel(time = cls.times, hemisphere = cls.pole).mean('time')
             if 'member' in dat.dims:
+                print(dat)
                 plt.plot(dat['tau'].values, dat.mean('member').values, color = colors[i], linewidth = 2.0, label = ds.test_name )
                 plt.fill_between(dat['tau'].values, dat.min('member').values, dat.max('member').values, color = colors[i], alpha = 0.5)
             else:

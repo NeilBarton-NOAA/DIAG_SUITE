@@ -1,11 +1,12 @@
 #!jinja2
 ########################
 # Items that may need changed
-{% set EXPS = 'EP6' %}
-{% set DATES = 'R8/2018-01-04T00/P7D, R8/2018-08-02T00/P7D' %}
-{% set AICE_VAR = "aice_d" %}
+{% set EXPS = 'EP5r1, EP6' %}
+{% set DATES = 'R2/2018-01-04T00/P7D' %}
+{% set ICE_VARS = "aice, hi" %}
 {% set ENS_MEMBERS = 10 %}
 {% set PARSE_DATA = True %}
+{% set MAIL_ADDRESS = "neil.barton@noaa.gov" %}
 
 ########################
 # DATES
@@ -13,7 +14,7 @@
 # EP miniset            'R8/2018-01-03T00/P7D, R8/2018-08-01T00/P7D'
 # EPr miniset           'R8/2018-01-04T00/P7D, R8/2018-08-02T00/P7D'
 # GFS Dates             'R29/2019-12-03T00/P3D, R31/2020-06-01T00/P3D'
-# GFS/HR Hurricane         'R81/2020-09-01T00/P1D'
+# GFS/HR Hurricane      'R81/2020-09-01T00/P1D'
 # GDAS dates from Lydia 'R13/2021-07-03T00/P1D'
 
 ####################################
@@ -27,9 +28,13 @@
 
 [scheduler]
     UTC mode = True
+    [[events]]
+        mail events = stall, abort, submission failed, fail
+    [[mail]]
+        to = {{ MAIL_ADDRESS }}
 
 [task parameters]
-    cice_var = {{ AICE_VAR }}
+    cice_vars = {{ ICE_VARS }}
     experiment = {{ EXPS }}
     mem = 0..{{ ENS_MEMBERS }}
     poles = 'north', 'south'
@@ -37,7 +42,7 @@
 [scheduling]
     initial cycle point = {{ ICP }}
     final cycle point = {{ FCP }}
-    runahead limit = P0
+    runahead limit = P10
     [[queues]]
         [[[default]]]
             limit = 42
@@ -51,11 +56,16 @@
             POST_PARSE     
         {% endif %} # if PARSE_DATA
              """
+        
+        {% if PARSE_DATA %}
         {{ DATES }} = """
             GRAB_EXPS:succeed-all           => PARSE_OUTPUT_CICE
             PARSE_OUTPUT_CICE:succeed-all   => ENSEMBLE_COMBINE
             ENSEMBLE_COMBINE:succeed-all    => POST_PARSE
-                
+            """
+        {% endif %} # if PARSE_DATA
+
+        R1/{{ FCP }} = """    
             POST_PARSE => CALC_ICE_EXTENT 
             POST_PARSE => INTERP_ICE
 
@@ -70,18 +80,19 @@
 # tasks
 [runtime]
     [[root]] 
-        platform = localhost
-        #platform = slurm_local
+        #platform = localhost
+        platform = slurm_local
         execution retry delays = 3*PT10M
         init-script = """
 umask 022
-set -xu
+declare -rx PS4='+ $(basename ${BASH_SOURCE[0]:-${FUNCNAME[0]:-"Unknown"}})[${LINENO}]'"${id}: "
+set -eux
 export SCRIPT_DIR=${CYLC_RUN_DIR}/${CYLC_WORKFLOW_NAME}/_cylc-install/source/SCRIPTS
 source ${SCRIPT_DIR}/modules.sh
 unset ESMFMKFILE
 """
         [[[environment]]]
-            AICE_VAR            = {{ AICE_VAR }}
+            ICE_VARS            = {{ ICE_VARS }}
             DTG                 = $(cylc cycle-point --template=%Y%m%d%H)
             EXPS                = {{ EXPS }}
             ENS_MEMBERS         = {{ ENS_MEMBERS }}
@@ -98,6 +109,7 @@ unset ESMFMKFILE
         [[[directives]]]
             --partition = service
     [[GRAB_EXPS]]
+        platform = localhost
         inherit = HPSS
     [[grab<experiment>_from_hpss]]
         inherit = GRAB_EXPS
@@ -106,6 +118,7 @@ unset ESMFMKFILE
         ${SCRIPT_DIR}/GRAB_exps_from_hpss.sh ${DTG} ${EXP} ${ENS_MEMBERS}
         """
     [[GRAB_OBS]]
+        platform = localhost
         inherit = HPSS 
     [[grab_sea_ice_extents]]
         inherit = GRAB_OBS
@@ -121,19 +134,21 @@ unset ESMFMKFILE
 ################################################
 # parse data
     [[PARSE_OUTPUT_CICE]]
-    [[parse_output<experiment><mem><cice_var>]]
+        platform = localhost
+    [[parse_output<experiment><mem><cice_vars>]]
         inherit = PARSE_OUTPUT_CICE
         script = """
-        VAR=${CYLC_TASK_PARAM_cice_var}
+        VAR=${CYLC_TASK_PARAM_cice_vars}
         EXP=${CYLC_TASK_PARAM_experiment}
         MEM=${CYLC_TASK_PARAM_mem}
-        ${SCRIPT_DIR}/CICE_parse_output.sh ${DTG} ${VAR} ${EXP} ${MEM} ${ENS_MEMBERS}
+        source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
+        ${SCRIPT_DIR}/CICE_parse_output.sh ${DTG} ${VAR}_${CICE_SUFFIX} ${EXP} ${MEM} ${ENS_MEMBERS}
         """
     [[ENSEMBLE_COMBINE]]
-    [[ensemble_combine<experiment><cice_var>]]
+    [[ensemble_combine<experiment><cice_vars>]]
         inherit = ENSEMBLE_COMBINE
         script = """
-        VAR=${CYLC_TASK_PARAM_cice_var}
+        VAR=${CYLC_TASK_PARAM_cice_vars}
         EXP=${CYLC_TASK_PARAM_experiment}
         ${SCRIPT_DIR}/ENS_combine_files.sh ${DTG} ${VAR} ${EXP} 
         """
@@ -146,30 +161,28 @@ unset ESMFMKFILE
 ################################################
 # diagnostics
    [[CALC_ICE_EXTENT]]
-        platform = slurm_local
    [[calc_ice_extent<experiment>]]
         inherit = CALC_ICE_EXTENT
         script = """
         EXP=${CYLC_TASK_PARAM_experiment}
         source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
-        ${SCRIPT_DIR}/CALC_ice_extent.py -d ${TOPDIR_OUTPUT}/${EXP} -v ${AICE_VAR}
+        ${SCRIPT_DIR}/CALC_ice_extent.py -d ${TOPDIR_OUTPUT}/${EXP} -v ${ICE_VAR}_${CICE_SUFFIX}
         """
         [[[directives]]]
             --time = 04:00:00
             #--qos = debug
    [[plot_ice_extent]]
         script = """
-        source ${SCRIPT_DIR}/experiment_options.sh HR1 ${DTG}
-        ${SCRIPT_DIR}/PLOT_ice_extent.py -d ${TOPDIR_OUTPUT} -e ${EXPS} -v ${AICE_VAR} -fd ${TOPDIR_FIGURES} -od ${TOPDIR_OBS}
+        source ${SCRIPT_DIR}/experiment_options.sh DUMMY ${DTG}
+        ${SCRIPT_DIR}/PLOT_ice_extent.py -d ${TOPDIR_OUTPUT} -e ${EXPS} -v ${ICE_VAR}_${CICE_SUFFIX} -fd ${TOPDIR_FIGURES} -od ${TOPDIR_OBS}
         """
    [[INTERP_ICE]]
-        platform = slurm_local
    [[interp_ice<experiment>]]
         inherit = INTERP_ICE
         script = """
         EXP=${CYLC_TASK_PARAM_experiment}
         source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
-        ${SCRIPT_DIR}/INTERP_iiee.py -d ${TOPDIR_OUTPUT}/${EXP} -v ${AICE_VAR} -od ${TOPDIR_OBS}
+        ${SCRIPT_DIR}/INTERP_iiee.py -d ${TOPDIR_OUTPUT}/${EXP} -v ${ICE_VAR}_${CICE_SUFFIX} -od ${TOPDIR_OBS}
         """
         [[[directives]]]
             --time = 08:00:00
@@ -179,14 +192,14 @@ unset ESMFMKFILE
         script = """
         EXP=${CYLC_TASK_PARAM_experiment}
         source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
-        ${SCRIPT_DIR}/CALC_iiee.py -d ${TOPDIR_OUTPUT}/${EXP} -v ${AICE_VAR} -od ${TOPDIR_OBS}
+        ${SCRIPT_DIR}/CALC_iiee.py -d ${TOPDIR_OUTPUT}/${EXP} -v ${ICE_VAR}_${CICE_SUFFIX} -od ${TOPDIR_OBS}
         """
         [[[directives]]]
             --time = 08:00:00
    [[plot_iiee]]
         script = """
-        source ${SCRIPT_DIR}/experiment_options.sh HR1 ${DTG}
-        ${SCRIPT_DIR}/PLOT_iiee.py -d ${TOPDIR_OUTPUT} -v ${AICE_VAR} -e ${EXPS} -fd ${TOPDIR_FIGURES}
+        source ${SCRIPT_DIR}/experiment_options.sh DUMMY ${DTG}
+        ${SCRIPT_DIR}/PLOT_iiee.py -d ${TOPDIR_OUTPUT} -v ${ICE_VAR}_${CICE_SUFFIX} -e ${EXPS} -fd ${TOPDIR_FIGURES}
         """
    [[MAPS_ICE_CON]]
    [[maps_ice_concentration<poles><experiment>]]
@@ -195,7 +208,7 @@ unset ESMFMKFILE
         EXP=${CYLC_TASK_PARAM_experiment}
         POLE=${CYLC_TASK_PARAM_poles}
         source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
-        ${SCRIPT_DIR}/CICE_maps.py -d ${TOPDIR_OUTPUT}/${EXP} -e ${EXP} -v ${AICE_VAR} -p ${POLE} -fd ${TOPDIR_FIGURES} -od ${TOPDIR_OBS}
+        ${SCRIPT_DIR}/CICE_maps.py -d ${TOPDIR_OUTPUT}/${EXP} -e ${EXP} -v ${ICE_VAR}_${CICE_SUFFIX} -p ${POLE} -fd ${TOPDIR_FIGURES} -od ${TOPDIR_OBS}
         """
         [[[directives]]]
             --time = 08:00:00
