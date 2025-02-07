@@ -25,8 +25,6 @@ parser.add_argument('-d', '--dirs', action = 'store', nargs = 1, \
         help="top directory to find model output files")
 parser.add_argument('-e', '--exps', action = 'store', nargs = '+', \
         help="experiments to calc ice extent. Also name of directory under -d")
-parser.add_argument('-v', '--var', action = 'store', nargs = 1, \
-        help="variable to parse")
 parser.add_argument('-fd', '--figuredir', action = 'store', nargs = 1, \
         help="directory of figures")
 parser.add_argument('-od', '--obsdir', action = 'store', nargs = 1, \
@@ -34,9 +32,9 @@ parser.add_argument('-od', '--obsdir', action = 'store', nargs = 1, \
 args = parser.parse_args()
 tdir = args.dirs[0]
 exps = args.exps
-var = args.var[0]
 save_dir = args.figuredir[0]
 obs_dir = args.obsdir[0]
+var = 'aice'
 
 ####################################
 # grab ice extent from models

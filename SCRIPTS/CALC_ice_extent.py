@@ -22,11 +22,9 @@ import PYTHON_TOOLS as npb
 parser = argparse.ArgumentParser( description = "Compares Sea Ice Extent Between Runs and Observations")
 parser.add_argument('-d', '--dirs', action = 'store', nargs = 1, \
         help="top directory to find model output files")
-parser.add_argument('-v', '--var', action = 'store', nargs = 1, \
-        help="variable to parse")
 args = parser.parse_args()
 tdir = args.dirs[0]
-var = args.var[0]
+var = 'aice'
 f = tdir + '/cice_area.nc'
 area = xr.open_dataset(f)
 print(tdir)

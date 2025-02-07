@@ -15,7 +15,7 @@ if [[ -f ${out_file} ]]; then
     exit 0
 fi
 
-files=$( ls ${TOPDIR_OUTPUT}/${EXP}/${var}_*_${dtg}.nc )
+files=$( ls ${TOPDIR_OUTPUT}/${EXP}/TEMP/${var}_*_${dtg}.nc )
 ncecat -u member ${files} ${out_file}
 (( $? != 0 )) && exit 1
 rm ${files}

@@ -14,10 +14,9 @@ else
     echo 'FATAL: MACHINE UNKNOWN'
     exit 1
 fi
-TOPDIR_OBS=${WORK_DIR}/${USER}/DIAG/OBS
-TOPDIR_OUTPUT=${WORK_DIR}/${USER}/DIAG
-TOPDIR_FIGURES=${WORK_DIR}/${USER}/FIGURES
-
+export TOPDIR_OBS=${WORK_DIR}/${USER}/DIAG/OBS
+export TOPDIR_OUTPUT=${WORK_DIR}/${USER}/DIAG
+export TOPDIR_FIGURES=${WORK_DIR}/${USER}/FIGURES
 
 # Location of based on experiment
 case ${EXP} in 

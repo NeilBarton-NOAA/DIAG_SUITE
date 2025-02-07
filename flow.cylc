@@ -142,7 +142,7 @@ unset ESMFMKFILE
         EXP=${CYLC_TASK_PARAM_experiment}
         MEM=${CYLC_TASK_PARAM_mem}
         source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
-        ${SCRIPT_DIR}/CICE_parse_output.sh ${DTG} ${VAR}_${CICE_SUFFIX} ${EXP} ${MEM} ${ENS_MEMBERS}
+        ${SCRIPT_DIR}/CICE_parse_output.sh ${DTG} ${VAR} ${EXP} ${MEM} ${ENS_MEMBERS}
         """
     [[ENSEMBLE_COMBINE]]
     [[ensemble_combine<experiment><cice_vars>]]
@@ -166,7 +166,7 @@ unset ESMFMKFILE
         script = """
         EXP=${CYLC_TASK_PARAM_experiment}
         source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
-        ${SCRIPT_DIR}/CALC_ice_extent.py -d ${TOPDIR_OUTPUT}/${EXP} -v ${ICE_VAR}_${CICE_SUFFIX}
+        ${SCRIPT_DIR}/CALC_ice_extent.py -d ${TOPDIR_OUTPUT}/${EXP} 
         """
         [[[directives]]]
             --time = 04:00:00
@@ -174,7 +174,7 @@ unset ESMFMKFILE
    [[plot_ice_extent]]
         script = """
         source ${SCRIPT_DIR}/experiment_options.sh DUMMY ${DTG}
-        ${SCRIPT_DIR}/PLOT_ice_extent.py -d ${TOPDIR_OUTPUT} -e ${EXPS} -v ${ICE_VAR}_${CICE_SUFFIX} -fd ${TOPDIR_FIGURES} -od ${TOPDIR_OBS}
+        ${SCRIPT_DIR}/PLOT_ice_extent.py -d ${TOPDIR_OUTPUT} -e ${EXPS} -fd ${TOPDIR_FIGURES} -od ${TOPDIR_OBS}
         """
    [[INTERP_ICE]]
    [[interp_ice<experiment>]]
@@ -182,7 +182,7 @@ unset ESMFMKFILE
         script = """
         EXP=${CYLC_TASK_PARAM_experiment}
         source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
-        ${SCRIPT_DIR}/INTERP_iiee.py -d ${TOPDIR_OUTPUT}/${EXP} -v ${ICE_VAR}_${CICE_SUFFIX} -od ${TOPDIR_OBS}
+        ${SCRIPT_DIR}/INTERP_iiee.py -d ${TOPDIR_OUTPUT}/${EXP} -od ${TOPDIR_OBS}
         """
         [[[directives]]]
             --time = 08:00:00
@@ -192,23 +192,24 @@ unset ESMFMKFILE
         script = """
         EXP=${CYLC_TASK_PARAM_experiment}
         source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
-        ${SCRIPT_DIR}/CALC_iiee.py -d ${TOPDIR_OUTPUT}/${EXP} -v ${ICE_VAR}_${CICE_SUFFIX} -od ${TOPDIR_OBS}
+        ${SCRIPT_DIR}/CALC_iiee.py -d ${TOPDIR_OUTPUT}/${EXP} -od ${TOPDIR_OBS}
         """
         [[[directives]]]
             --time = 08:00:00
    [[plot_iiee]]
         script = """
         source ${SCRIPT_DIR}/experiment_options.sh DUMMY ${DTG}
-        ${SCRIPT_DIR}/PLOT_iiee.py -d ${TOPDIR_OUTPUT} -v ${ICE_VAR}_${CICE_SUFFIX} -e ${EXPS} -fd ${TOPDIR_FIGURES}
+        ${SCRIPT_DIR}/PLOT_iiee.py -d ${TOPDIR_OUTPUT} -e ${EXPS} -fd ${TOPDIR_FIGURES}
         """
    [[MAPS_ICE_CON]]
-   [[maps_ice_concentration<poles><experiment>]]
+   [[maps_ice_concentration<poles><cice_vars><experiment>]]
         inherit = MAPS_ICE_CON
         script = """
         EXP=${CYLC_TASK_PARAM_experiment}
         POLE=${CYLC_TASK_PARAM_poles}
+        VAR=${CYCL_TASK_PARAM_cice_vars}
         source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
-        ${SCRIPT_DIR}/CICE_maps.py -d ${TOPDIR_OUTPUT}/${EXP} -e ${EXP} -v ${ICE_VAR}_${CICE_SUFFIX} -p ${POLE} -fd ${TOPDIR_FIGURES} -od ${TOPDIR_OBS}
+        ${SCRIPT_DIR}/CICE_maps.py -d ${TOPDIR_OUTPUT}/${EXP} -e ${EXP} -v ${VAR} -p ${POLE} -fd ${TOPDIR_FIGURES} -od ${TOPDIR_OBS}
         """
         [[[directives]]]
             --time = 08:00:00
