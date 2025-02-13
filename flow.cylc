@@ -73,7 +73,7 @@
                
             INTERP_ICE:succeed-all => CALC_IIEE
             CALC_IIEE:succeed-all   => plot_iiee
-            INTERP_ICE:succeed-all => MAPS_ICE_CON
+            INTERP_ICE:succeed-all => MAPS_ICE
             """
 
 ################################################
@@ -201,13 +201,13 @@ unset ESMFMKFILE
         source ${SCRIPT_DIR}/experiment_options.sh DUMMY ${DTG}
         ${SCRIPT_DIR}/PLOT_iiee.py -d ${TOPDIR_OUTPUT} -e ${EXPS} -fd ${TOPDIR_FIGURES}
         """
-   [[MAPS_ICE_CON]]
-   [[maps_ice_concentration<poles><cice_vars><experiment>]]
-        inherit = MAPS_ICE_CON
+   [[MAPS_ICE]]
+   [[maps_ice<poles><cice_vars><experiment>]]
+        inherit = MAPS_ICE
         script = """
         EXP=${CYLC_TASK_PARAM_experiment}
         POLE=${CYLC_TASK_PARAM_poles}
-        VAR=${CYCL_TASK_PARAM_cice_vars}
+        VAR=${CYLC_TASK_PARAM_cice_vars}
         source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
         ${SCRIPT_DIR}/CICE_maps.py -d ${TOPDIR_OUTPUT}/${EXP} -e ${EXP} -v ${VAR} -p ${POLE} -fd ${TOPDIR_FIGURES} -od ${TOPDIR_OBS}
         """

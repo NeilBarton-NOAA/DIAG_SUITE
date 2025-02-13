@@ -31,10 +31,9 @@ var = 'aice'
 ########################
 # get observations
 ICEOBS = []
-ICEOBS.extend(npb.iceobs.get_icecon_nt(obs_dir))
+#ICEOBS.extend(npb.iceobs.get_icecon_nt(obs_dir))
 ICEOBS.extend(npb.iceobs.get_icecon_bs(obs_dir))
 ICEOBS.extend(npb.iceobs.get_icecon_cdr(obs_dir))
-
 CLIMO = npb.iceobs.get_icecon_daily_climatology(obs_dir)
 
 ########################
@@ -48,7 +47,6 @@ iiee_file = tdir + '/iiee.nc'
 if os.path.exists(iiee_file):
     print('Removing IIEE file')
     os.remove(iiee_file)
-#files = [files[5]]
 exp_dat = []
 if os.path.exists(iiee_file) == False:
     for f in files:

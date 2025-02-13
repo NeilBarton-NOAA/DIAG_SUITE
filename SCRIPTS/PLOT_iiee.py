@@ -28,14 +28,12 @@ parser.add_argument('-d', '--dirs', action = 'store', nargs = 1, \
         help="top directory to find model output files")
 parser.add_argument('-e', '--exps', action = 'store', nargs = '+', \
         help="experiments to calc ice extent. Also name of directory under -d")
-parser.add_argument('-v', '--var', action = 'store', nargs = 1, \
-        help="variable to parse")
 parser.add_argument('-fd', '--figuredir', action = 'store', nargs = 1, \
         help="directory of figures")
 args = parser.parse_args()
 tdir = args.dirs[0]
 exps = args.exps
-var = args.var[0]
+var = 'aice'
 save_dir = args.figuredir[0]
 obs_types = ['cdr_seaice_conc', 'cdr_seaice_conc_persistence', 'cdr_seaice_conc_climatology']
 #obs_types = ['cdr_seaice_conc', 'cdr_seaice_conc_persistence'] #, 'cdr_seaice_conc_climatology']
@@ -75,6 +73,7 @@ npb.plot.iiee.save_dir = save_dir
 npb.plot.iiee.DATS = DAT
 npb.plot.iiee.OBS_TYPES = obs_types 
 for pole in ['north', 'south']:
+    # plot winter and summer cases
     print('IIEE Plot: ' , pole)
     npb.plot.iiee.pole = pole
     npb.plot.iiee.times = times 
@@ -95,13 +94,15 @@ for pole in ['north', 'south']:
         npb.plot.iiee.create() 
     # plot winter and summer cases
     m_times = times.isel(time = times.dt.month.isin([1,2,12]))
-    npb.plot.iiee.times = m_times 
-    npb.plot.iiee.title = 'Winter' 
-    npb.plot.iiee.create() 
+    if m_times.size > 5:
+        npb.plot.iiee.times = m_times 
+        npb.plot.iiee.title = 'Winter' 
+        npb.plot.iiee.create() 
     m_times = times.isel(time = times.dt.month.isin([6,7,8]))
-    npb.plot.iiee.times = m_times 
-    npb.plot.iiee.title = 'Summer' 
-    npb.plot.iiee.create() 
+    if m_times.size > 5:
+        npb.plot.iiee.times = m_times 
+        npb.plot.iiee.title = 'Summer' 
+        npb.plot.iiee.create() 
 
 
     # if all months exist

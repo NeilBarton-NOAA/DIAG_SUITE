@@ -71,6 +71,7 @@ npb.plot.ice_extent.save_dir = save_dir
 npb.plot.ice_extent.dats = DAT
 npb.plot.ice_extent.obss = OBS
 for pole in ['north', 'south']:
+    m_times = times.isel(time = times.dt.month.isin([1,2,12]))
     npb.plot.ice_extent.pole = pole
     npb.plot.ice_extent.times = times 
     npb.plot.ice_extent.title = 'All Times'
@@ -90,13 +91,15 @@ for pole in ['north', 'south']:
         npb.plot.ice_extent.create() 
     # plot winter and summer cases
     m_times = times.isel(time = times.dt.month.isin([1,2,12]))
-    npb.plot.ice_extent.times = m_times 
-    npb.plot.ice_extent.title = 'Winter' 
-    npb.plot.ice_extent.create() 
+    if m_times.size > 5:
+        npb.plot.ice_extent.times = m_times 
+        npb.plot.ice_extent.title = 'Winter' 
+        npb.plot.ice_extent.create() 
     m_times = times.isel(time = times.dt.month.isin([6,7,8]))
-    npb.plot.ice_extent.times = m_times 
-    npb.plot.ice_extent.title = 'Summer' 
-    npb.plot.ice_extent.create() 
+    if m_times.size > 5:
+        npb.plot.ice_extent.times = m_times 
+        npb.plot.ice_extent.title = 'Summer' 
+        npb.plot.ice_extent.create() 
 
 ############
 # plot monthly per tau bias heat plots

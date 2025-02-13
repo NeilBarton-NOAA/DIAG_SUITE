@@ -209,9 +209,10 @@ def iiee(DAT, OBS, CLIMO = False, var = 'aice_d'):
         dim_sum = model_dims[-2::]
         ####################################
         # observations
+        t_first = t + np.timedelta64(int(DAT['tau'][0].values/24), 'D')
         t_last = t + np.timedelta64(int(DAT['tau'][-1].values/24), 'D')
         ob = ob.rename_dims({'y': 'y' + ob.grid_name, 'x': 'x' + ob.grid_name, 'time' : 'tau'})
-        data = ob['ice_con'].sel(time = slice(t, t_last))
+        data = ob['ice_con'].sel(time = slice(t_first, t_last))
         data = data.drop_vars('time')
         data['tau'] = DAT['tau'].values 
         data = data.where(data < 2, 0)
@@ -236,23 +237,26 @@ def iiee(DAT, OBS, CLIMO = False, var = 'aice_d'):
         # climatology values
         if ADD_CLIMO:
             k = OBS_NAMES.index(ob.name + '_climatology')
-            data = ob['ice_con'].sel(time = slice(t, t_last))
+            data = ob['ice_con'].sel(time = slice(t_first, t_last))
             data = data.drop_vars('time')
             data['tau'] = DAT['tau'].values 
             data = data.where(data < 2, 0)
             data = data.where(data < 0.15, 1, 0)
             clim = CLIMO[p]
             clim = clim.rename_dims({'y': 'y' + ob.grid_name, 'x': 'x' + ob.grid_name, 'dayofyear' : 'tau'})
-            doy = pd.to_datetime(ob['time'].sel(time = slice(t, t_last)).values).day_of_year
+            doy = pd.to_datetime(ob['time'].sel(time = slice(t_first, t_last)).values).day_of_year
             model = clim['ice_con'].sel(dayofyear = doy.values)
             model = model.drop_vars('dayofyear')
             model['tau'] = DAT['tau'].values 
             model = model.where(model < 2, 0)
             model = model.where(model < 0.15, 1, 0)
             DAT['diff'] = (model.dims, model.values - data.values)
-            test = np.array((np.multiply(abs(DAT['diff']), area)).sum(dim = dim_sum).values / 1e6)
-            DAT['iiee'][k,p,:,0] = (np.multiply(abs(DAT['diff']), area)).sum(dim = dim_sum).values / 1e6
-            DAT['aee'][k,p,:,0]  = abs(np.multiply(DAT['diff'], area).sum(dim = dim_sum).values / 1e6)
+            iiee = np.array((np.multiply(abs(DAT['diff']), area)).sum(dim = dim_sum).values / 1e6)
+            aee = abs(np.multiply(DAT['diff'], area).sum(dim = dim_sum).values / 1e6)
+            if 'member' in DAT.dims:
+                for mem in DAT['member'].values:
+                    DAT['iiee'][k,p,mem,:,0] = iiee
+                    DAT['aee'][k,p,mem,:,0]  = aee
     DAT['me'] = (DAT['iiee'].dims, DAT['iiee'].values - DAT['aee'].values)
     SAVE_DAT = DAT.copy()
     SAVE_DAT.drop('TLAT')
