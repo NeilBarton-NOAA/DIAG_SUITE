@@ -59,7 +59,11 @@ p = 0 if pole == 'north' else 1
 ########################
 # get model results
 print(exp)
-file_search = tdir + '/interp_obs_grids_' + var + '*.nc'
+if var == 'aice':
+    file_search = tdir + '/interp_obs_grids_' + var + '*.nc'
+else:
+    file_search = tdir + '/' + var + '*.nc'
+
 DAT = xr.open_mfdataset(file_search, combine = 'nested', concat_dim = 'time', decode_times = True)
 #DAT = xr.open_mfdataset(file_search, combine = 'nested', concat_dim = 'time', decode_times = False)
 if 'member' in DAT.dims:
@@ -103,16 +107,18 @@ for m in months:
         npb.maps.icecon.create()
 # plot winter and summer cases
 m_times = times.isel(time = times.dt.month.isin([1,2,12]))
-npb.maps.icecon.times = m_times
-for tau in TAUS:
-    npb.maps.icecon.tau = tau
-    npb.maps.icecon.title = exp + ' for Winter' + \
+if m_times.size > 5:
+    npb.maps.icecon.times = m_times
+    for tau in TAUS:
+        npb.maps.icecon.tau = tau
+        npb.maps.icecon.title = exp + ' for Winter' + \
             ': Forecast Day ' + str(tau)
-    npb.maps.icecon.create()
+        npb.maps.icecon.create()
 m_times = times.isel(time = times.dt.month.isin([6,7,8]))
-npb.maps.icecon.times = m_times
-for tau in TAUS:
-    npb.maps.icecon.tau = tau
-    npb.maps.icecon.title = exp + ' for Summer' + \
+if m_times.size > 5:
+    npb.maps.icecon.times = m_times
+    for tau in TAUS:
+        npb.maps.icecon.tau = tau
+        npb.maps.icecon.title = exp + ' for Summer' + \
             ': Forecast Day ' + str(tau)
-    npb.maps.icecon.create()
+        npb.maps.icecon.create()

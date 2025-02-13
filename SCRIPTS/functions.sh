@@ -4,7 +4,7 @@ set -u
 cice_var_name () {
 f=${1}
 v=${2}
-var=$(ncdump -h ${f} | grep aice | grep long_name | awk '{print $1}')
+var=$(ncdump -h ${f} | grep ${v}_ | grep long_name | awk '{print $1}')
 echo ${var%%:*}
 }
 

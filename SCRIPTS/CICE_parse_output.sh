@@ -66,7 +66,7 @@ if (( TAU != TAU2 )); then
     exit 1
 fi
 cice_var=$(cice_var_name ${f} ${var})
-    
+
 file_tau_list=""
 MAX_TAU=$(( nfiles * TAU ))
 for tau in $( seq 24 ${TAU} ${MAX_TAU}); do
