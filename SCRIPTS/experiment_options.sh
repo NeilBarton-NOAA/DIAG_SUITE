@@ -1,5 +1,6 @@
 #!/bin/sh
 set -u
+declare -rx PS4='+ $(basename ${BASH_SOURCE[0]:-${FUNCNAME[0]:-"Unknown"}})[${LINENO}]'"(${1}): "
 EXP=${1:-EP6}
 dtg=${2:-${DTG}}
 SCRIPT_DIR=${SCRIPT_DIR:-$PWD}

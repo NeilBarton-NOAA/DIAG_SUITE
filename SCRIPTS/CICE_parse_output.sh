@@ -69,6 +69,7 @@ cice_var=$(cice_var_name ${f} ${var})
 
 file_tau_list=""
 MAX_TAU=$(( nfiles * TAU ))
+
 for tau in $( seq 24 ${TAU} ${MAX_TAU}); do
     if [[ ${WORKFLOW} == 'GEFS' ]]; then
         f_tau=$(( tau - TAU ))
@@ -79,7 +80,6 @@ for tau in $( seq 24 ${TAU} ${MAX_TAU}); do
         f=$(ls ${src_dir}/*ice*.f${f_tau}.nc )
     fi
     out_tau_file=${TOPDIR_OUTPUT}/${EXP}/TEMP/${dtg}/CICE_${dtg}_${var}_M${MEM}_${f_tau}.nc
-    echo ${f_tau} ${f}    
     CICE_PARSE ${f} ${out_tau_file} ${cice_var} ${ENS_MEMBERS}
     file_tau_list=${file_tau_list}' '${out_tau_file}
 done
