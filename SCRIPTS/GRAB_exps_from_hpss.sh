@@ -20,6 +20,7 @@ mkdir -p ${local_download_dir} && cd ${local_download_dir}
 FILES_PRESENT=$( correct_n_files "${local_ice_dir}" ${ENS_MEMBERS})
 
 if [[ ${FILES_PRESENT} == F ]]; then
+    echo ${hpss_file}
     htar -xvf ${hpss_file}
     if (( ${?} > 0 )); then
         echo 'HTAR failed'

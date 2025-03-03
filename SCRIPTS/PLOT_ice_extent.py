@@ -109,6 +109,6 @@ for pole in ['north', 'south']:
 #       RPL = RPL.assign_attrs(attrs)
 if len(months) == 12:
     for d in DAT:
-        for obs in EXT:
+        for obs in OBS:
             npb.plot.ice_extent_imshowdiff(d, obs, pole = 'north')
             npb.plot.ice_extent_imshowdiff(d, obs, pole = 'south')
