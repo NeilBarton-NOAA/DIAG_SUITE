@@ -34,6 +34,8 @@ parser.add_argument('-fd', '--figuredir', action = 'store', nargs = 1, \
         help="directory of figures")
 parser.add_argument('-od', '--obsdir', action = 'store', nargs = 1, \
         help="top directory for observations")
+parser.add_argument('-ae', '--allexps', action = 'store', nargs = '*', default = None, \
+        help="all experiments being analyzed to make sure tau and time are the same")
 args = parser.parse_args()
 tdir = args.dirs[0]
 exp = args.exp[0]
@@ -41,6 +43,7 @@ var = args.var[0]
 pole = args.pole[0]
 save_dir = args.figuredir[0]
 obs_dir = args.obsdir[0]
+all_exps = args.allexps
 ########################
 # names of variables, may want to move someplace else
 long_name = {
@@ -60,20 +63,33 @@ p = 0 if pole == 'north' else 1
 # get model results
 print(exp)
 if var == 'aice':
-    file_search = tdir + '/interp_obs_grids_' + var + '*.nc'
+    file_search = '/interp_obs_grids_' + var + '*.nc'
 else:
-    file_search = tdir + '/' + var + '*.nc'
+    file_search = '/' + var + '*.nc'
 
-DAT = xr.open_mfdataset(file_search, combine = 'nested', concat_dim = 'time', decode_times = True)
+DAT = xr.open_mfdataset(tdir + file_search, combine = 'nested', concat_dim = 'time', decode_times = True)
 #DAT = xr.open_mfdataset(file_search, combine = 'nested', concat_dim = 'time', decode_times = False)
 if 'member' in DAT.dims:
     DAT = DAT.mean('member')
-DAT['tau'] = DAT['tau'] / 24.0
+taus = DAT['tau'].values
+times = DAT['time'].values
+if all_exps:
+    for e in all_exps:
+        if e != exp:
+            print('Comparing times and taus to', e)
+            print(tdir + '/../' + e + file_search)
+            DAT2 = xr.open_mfdataset(obs_dir + '/../' + e + file_search, combine = 'nested', concat_dim = 'time', decode_times = True)
+            times = np.array(list(set(DAT2['time'].values) & set(times)))
+            taus = np.array(list(set(DAT2['tau'].values) & set(taus)))
+            del DAT2
+taus = taus / 24.0
+TAUS = [min(taus)] 
+TAUS.append(max(taus)) 
+DAT = DAT.sel(time = times)
 times = DAT['time']
+DAT['tau'] = DAT['tau'] / 24 
 
 #######################
-TAUS = [ DAT['tau'].values[0] ]
-TAUS.append(DAT['tau'].values[-1])
 npb.maps.icecon.save_dir = save_dir
 npb.maps.icecon.dat = DAT
 npb.maps.icecon.obs = OBS[p]

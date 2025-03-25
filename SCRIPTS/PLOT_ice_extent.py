@@ -43,6 +43,8 @@ for exp in exps:
     exp = exp.replace(',','').strip()
     print(exp)
     D = xr.open_dataset( tdir + '/' + exp + '/ice_extent.nc')
+    if 'hemisphere' in D.dims:
+        D = D.rename({'hemisphere': 'pole'})
     D = D.assign_attrs({'test_name' : exp})
     DAT.append(D)
 
@@ -103,12 +105,17 @@ for pole in ['north', 'south']:
 
 ############
 # plot monthly per tau bias heat plots
-#   to add colorbar limits 
-#       attrs = {'DMIN': -5.0, 'DMAX': 5.0}
-#       CTL = CTL.assign_attrs(attrs)
-#       RPL = RPL.assign_attrs(attrs)
-if len(months) == 12:
-    for d in DAT:
+if len(np.unique(times.dt.month)) == 12:
+    for i, d in enumerate(DAT):
+        d.attrs['save_dir'] = save_dir
         for obs in OBS:
-            npb.plot.ice_extent_imshowdiff(d, obs, pole = 'north')
-            npb.plot.ice_extent_imshowdiff(d, obs, pole = 'south')
+            d.attrs['DMIN'], d.attrs['DMAX'] = -2.0, 2.0
+            npb.plot.monthdiff_imshow(d, obs, var = 'extent', pole = 'north')
+            d.attrs['DMIN'], d.attrs['DMAX'] = -6.0, 6.0
+            npb.plot.monthdiff_imshow(d, obs, var = 'extent', pole = 'south')
+        if i > 0:
+            d.attrs['DMIN'], d.attrs['DMAX'] = -0.5, 0.5
+            npb.plot.monthdiff_imshow(d, DAT[i-1], var = 'extent', pole = 'north')
+            d.attrs['DMIN'], d.attrs['DMAX'] = -0.5, 0.5
+            npb.plot.monthdiff_imshow(d, DAT[i-1], var = 'extent', pole = 'south')
+

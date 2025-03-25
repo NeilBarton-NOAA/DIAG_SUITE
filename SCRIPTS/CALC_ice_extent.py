@@ -35,4 +35,5 @@ D = xr.open_mfdataset(file_search, combine = 'nested', concat_dim = 'time', deco
 D['tau'] = D['tau'] / 24.0
 D = D.assign_attrs({'data_dir' : tdir})
 D = D.assign_attrs({'extent_file' : tdir + '/ice_extent.nc'})
+print(D)
 D = npb.icecalc.extent(D, area, var = var)

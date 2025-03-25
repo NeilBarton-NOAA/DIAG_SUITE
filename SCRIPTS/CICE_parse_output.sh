@@ -74,6 +74,7 @@ for tau in $( seq 24 ${TAU} ${MAX_TAU}); do
     if [[ ${WORKFLOW} == 'GEFS' ]]; then
         f_tau=$(( tau - TAU ))
         f_dtg=$(date -u -d"${dtg:0:4}-${dtg:4:2}-${dtg:6:2} 00:00:00 ${f_tau} hours" +%Y-%m-%d)
+        f_tau=$(( f_tau + 24 ))
         f=$( ls ${src_dir}/ice?.${f_dtg}.?${MEM}.nc )
     elif [[ ${WORKFLOW} == "GW" ]]; then
         f_tau=$(printf "%03d" ${tau})
@@ -91,4 +92,3 @@ rm ${file_tau_list}
 echo "CREATED:" ${out_file}
 echo " "
 
-exit 0

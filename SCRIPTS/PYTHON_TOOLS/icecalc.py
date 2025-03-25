@@ -15,6 +15,7 @@ def extent(DAT, area, var = 'aice_d', force_calc = False):
     except:
         f = None
     if os.path.exists(f):
+       print("ice_extent.nc file exist", f)
        dd = xr.open_dataset(f)
        DAT['extent'] = (dd['extent'].dims, dd['extent'].values)
     # assume data are from CICE model
@@ -31,9 +32,9 @@ def extent(DAT, area, var = 'aice_d', force_calc = False):
         DAT['tau_area'] = (area.dims, area.values) 
         print('     looping through time')
         if 'member' in DAT.dims:
-            dims_save = ['hemisphere', 'time', 'member', 'tau']
+            dims_save = ['pole', 'time', 'member', 'tau']
         else:
-            dims_save = ['hemisphere', 'time', 'tau']
+            dims_save = ['pole', 'time', 'tau']
         for t in DAT['time']:
             print('     ', t.values)
             # NH
@@ -51,11 +52,11 @@ def extent(DAT, area, var = 'aice_d', force_calc = False):
         print(data.shape)
         print(dims_save)
         DAT = DAT.assign(extent=(dims_save, data))
-        DAT = DAT.assign(hemisphere=('hemisphere', ['north', 'south']))
+        DAT = DAT.assign(pole=('pole', ['north', 'south']))
         if f:
             SAVE_DAT = DAT.copy()
             for key in SAVE_DAT.keys():
-                if key not in ['extent', 'time', 'hemisphere', 'member', 'tau']:
+                if key not in ['extent', 'time', 'pole', 'member', 'tau']:
                     SAVE_DAT = SAVE_DAT.drop(key)
             print(SAVE_DAT)
             print('writing:', f)

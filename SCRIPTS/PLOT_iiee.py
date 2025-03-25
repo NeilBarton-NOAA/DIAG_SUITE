@@ -47,6 +47,7 @@ obs_types = ['cdr_seaice_conc', 'cdr_seaice_conc_persistence', 'cdr_seaice_conc_
 # grab data
 DAT = []
 for i, e in enumerate(exps):
+    print(e)
     e = e.replace(',','').strip()
     f = tdir + '/' + e + '/iiee.nc'
     dat = xr.open_dataset(f)
@@ -68,7 +69,7 @@ else:
     times = DAT[0]['time']
 
 ####################################
-# plot iiee
+# line plots of iiee
 npb.plot.iiee.save_dir = save_dir
 npb.plot.iiee.DATS = DAT
 npb.plot.iiee.OBS_TYPES = obs_types 
@@ -104,45 +105,20 @@ for pole in ['north', 'south']:
         npb.plot.iiee.title = 'Summer' 
         npb.plot.iiee.create() 
 
-
-    # if all months exist
-    #if len(months) == 12: 
-#       iiee_min_per_month.create() 
-#        ####################################
-#        # plot imshow plot of cat with lowest IIEE value (month versus tau)
-#        fig = plt.figure(figsize=(8, 6))
-#        ax = fig.add_subplot(1,1,1)
-#        cmap = plt.get_cmap('jet')
-#        cmaplist = [cmap(i) for i in range(cmap.N)]
-#        for ii, ob in enumerate(obs_types):
-#            jj = int(ii/(len(obs_types) - 1) * len(cmaplist))
-#            if jj != 0:
-#                jj = jj - 1
-#            cmaplist[jj] = mpl.colors.hex2color(colors[ii])
-#            if jj not in [0, 255]:
-#                for jjj in [1,2,3,4,5]:
-#                    # pad colors to work
-#                    cmaplist[jj-jjj] = mpl.colors.hex2color(colors[ii])
-#                    cmaplist[jj+jjj] = mpl.colors.hex2color(colors[ii])
-#        cmap = mpl.colors.LinearSegmentedColormap.from_list('mcm',cmaplist, cmap.N)
-#        im = ax.imshow(ob_type_month, cmap = cmap,
-#                        vmin = 0, vmax = len(obs_types)-1,
-#                        aspect = 'auto',
-#                        interpolation = 'none')
-#        taus = np.arange(np.min(data['tau'].values), np.max(data['tau'].values) + 1)
-#        plt.xticks(np.arange(taus.size)[::3], taus[::3].astype('int'))
-#        for ii, ob in enumerate(obs_types):
-#            c = cmap(ii/(len(obs_types) - 1))
-#            if 'ice_con' in ob:
-#                tt = 'GEFS/EP4'
-#            else:
-#                tt = ob.capitalize()
-#            plt.text(np.max(taus) + 2 , 4 + ii, tt, color = c, fontsize = 16, fontweight = 'bold')
-#        plt.yticks(np.arange(12), y_label)
-#        ax.set_xlabel('Forecast Day')
-#        ax.set_title(t + ': Min IIEE', fontsize = 16, fontweight = 'bold')
-#        plt.tight_layout()
-#        fig_name = save_dir + '/' + pole[0].upper() + 'H_PER_MONTH_IIEE.png'
-#        print(fig_name)
-#        plt.savefig(fig_name, bbox_inches = 'tight')
-#        plt.close()
+if len(np.unique(times.dt.month)) == 12:
+    for i, D in enumerate(DAT):
+        # min iiee plots
+        npb.plot.iiee_min_imshow.save_dir = save_dir
+        npb.plot.iiee_min_imshow.DAT = D
+        npb.plot.iiee_min_imshow.OBS_TYPES = obs_types 
+        pole = 'north'
+        npb.plot.iiee_min_imshow.create()
+        pole = 'south'
+        npb.plot.iiee_min_imshow.create()
+        # differnce iiee plots
+        if i > 0:
+            D.attrs['save_dir'] = save_dir
+            npb.plot.monthdiff_imshow(D.sel(obs_type = obs_types[0]), DAT[i-1].sel(obs_type = obs_types[0]), 
+                                        var = 'iiee', pole = 'north')
+            npb.plot.monthdiff_imshow(D.sel(obs_type = obs_types[0]), DAT[i-1].sel(obs_type = obs_types[0]), 
+                                        var = 'iiee', pole = 'south')

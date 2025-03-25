@@ -50,15 +50,15 @@ def get_extentobs_NASA(obs_dir):
             elif v_key == 'TotalAnt':
                 hem.append('south')
         ob['time'] = t
-        ob['hemisphere'] = hem
+        ob['pole'] = hem
         for k in ob.keys():
-            if k.strip() not in ['time', 'hemisphere', v_key]:
+            if k.strip() not in ['time', 'pole', v_key]:
                 ob.drop(k, axis = 1, inplace = True)
             else:
                 ob.rename(columns = {k: k.strip()}, inplace = True)
         ob[v_key] = ob[v_key] / 10e5
         ob.rename(columns = {v_key: 'extent'}, inplace = True)
-        ob.set_index(['time', 'hemisphere'], inplace = True)
+        ob.set_index(['time', 'pole'], inplace = True)
         if ii == 0:
             obs = ob
         else:
@@ -89,15 +89,15 @@ def get_extentobs_bootstrap(obs_dir):
             elif v_key == 'TotalAnt':
                 hem.append('south')
         ob['time'] = t
-        ob['hemisphere'] = hem
+        ob['pole'] = hem
         for k in ob.keys():
-            if k.strip() not in ['time', 'hemisphere', v_key]:
+            if k.strip() not in ['time', 'pole', v_key]:
                 ob.drop(k, axis = 1, inplace = True)
             else:
                 ob.rename(columns = {k: k.strip()}, inplace = True)
         ob[v_key] = ob[v_key] / 10e5
         ob.rename(columns = {v_key: 'extent'}, inplace = True)
-        ob.set_index(['time', 'hemisphere'], inplace = True)
+        ob.set_index(['time', 'pole'], inplace = True)
         if ii == 0:
             obs = ob
         else:

@@ -2,10 +2,10 @@
 ########################
 # Items that may need changed
 {% set EXPS = 'EP5r1, EP6' %}
-{% set DATES = 'R2/2018-01-04T00/P7D' %}
+{% set DATES = 'R104/2017-10-05T00/P7D, R104/2017-10-12T00/P7D' %}
 {% set ICE_VARS = "aice, hi" %}
 {% set ENS_MEMBERS = 10 %}
-{% set PARSE_DATA = True %}
+{% set PARSE_DATA = False %}
 {% set MAIL_ADDRESS = "neil.barton@noaa.gov" %}
 
 ########################
@@ -42,7 +42,7 @@
 [scheduling]
     initial cycle point = {{ ICP }}
     final cycle point = {{ FCP }}
-    runahead limit = P10
+    runahead limit = P30
     [[queues]]
         [[[default]]]
             limit = 42
@@ -52,8 +52,6 @@
         R1 = """
         {% if PARSE_DATA %}
             GRAB_OBS
-        {% else %}
-            POST_PARSE     
         {% endif %} # if PARSE_DATA
              """
         
@@ -61,19 +59,20 @@
         {{ DATES }} = """
             GRAB_EXPS:succeed-all           => PARSE_OUTPUT_CICE
             PARSE_OUTPUT_CICE:succeed-all   => ENSEMBLE_COMBINE
-            ENSEMBLE_COMBINE:succeed-all    => POST_PARSE
+            ENSEMBLE_COMBINE:succeed-all    => CLEAN
+            CLEAN:succeed-all               => POST_PARSE
             """
         {% endif %} # if PARSE_DATA
 
         R1/{{ FCP }} = """    
-            POST_PARSE => CALC_ICE_EXTENT 
-            POST_PARSE => INTERP_ICE
+            POST_PARSE                  => CALC_ICE_EXTENT 
+            POST_PARSE                  => INTERP_ICE
 
             CALC_ICE_EXTENT:succeed-all => plot_ice_extent
                
-            INTERP_ICE:succeed-all => CALC_IIEE
+            INTERP_ICE:succeed-all  => CALC_IIEE
             CALC_IIEE:succeed-all   => plot_iiee
-            INTERP_ICE:succeed-all => MAPS_ICE
+            INTERP_ICE:succeed-all  => MAPS_ICE
             """
 
 ################################################
@@ -109,7 +108,7 @@ unset ESMFMKFILE
         [[[directives]]]
             --partition = service
     [[GRAB_EXPS]]
-        platform = localhost
+        #platform = localhost
         inherit = HPSS
     [[grab<experiment>_from_hpss]]
         inherit = GRAB_EXPS
@@ -118,7 +117,7 @@ unset ESMFMKFILE
         ${SCRIPT_DIR}/GRAB_exps_from_hpss.sh ${DTG} ${EXP} ${ENS_MEMBERS}
         """
     [[GRAB_OBS]]
-        platform = localhost
+        #platform = localhost
         inherit = HPSS 
     [[grab_sea_ice_extents]]
         inherit = GRAB_OBS
@@ -134,7 +133,7 @@ unset ESMFMKFILE
 ################################################
 # parse data
     [[PARSE_OUTPUT_CICE]]
-        platform = localhost
+        #platform = localhost
     [[parse_output<experiment><mem><cice_vars>]]
         inherit = PARSE_OUTPUT_CICE
         script = """
@@ -152,10 +151,19 @@ unset ESMFMKFILE
         EXP=${CYLC_TASK_PARAM_experiment}
         ${SCRIPT_DIR}/ENS_combine_files.sh ${DTG} ${VAR} ${EXP} 
         """
+   [[CLEAN]]
+        platform = localhost
+   [[clean_CICE<experiment>]]
+        inherit = CLEAN
+        script = """
+        EXP=${CYLC_TASK_PARAM_experiment}
+        source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
+        ${SCRIPT_DIR}/CICE_clean.sh ${DTG} ${EXP}
+        """
    [[POST_PARSE]]
         platform = localhost
-        script = """ 
-        echo "POST_PARSE is a dummy task"
+        script = """
+        echo "dummy script"
         """
 
 ################################################
@@ -175,6 +183,8 @@ unset ESMFMKFILE
         script = """
         source ${SCRIPT_DIR}/experiment_options.sh DUMMY ${DTG}
         ${SCRIPT_DIR}/PLOT_ice_extent.py -d ${TOPDIR_OUTPUT} -e ${EXPS} -fd ${TOPDIR_FIGURES} -od ${TOPDIR_OBS}
+        echo "NPB check monthly plots"
+        exit 1
         """
    [[INTERP_ICE]]
    [[interp_ice<experiment>]]
@@ -200,6 +210,8 @@ unset ESMFMKFILE
         script = """
         source ${SCRIPT_DIR}/experiment_options.sh DUMMY ${DTG}
         ${SCRIPT_DIR}/PLOT_iiee.py -d ${TOPDIR_OUTPUT} -e ${EXPS} -fd ${TOPDIR_FIGURES}
+        echo "NPB check monthly plots"
+        exit 1
         """
    [[MAPS_ICE]]
    [[maps_ice<poles><cice_vars><experiment>]]
@@ -208,8 +220,9 @@ unset ESMFMKFILE
         EXP=${CYLC_TASK_PARAM_experiment}
         POLE=${CYLC_TASK_PARAM_poles}
         VAR=${CYLC_TASK_PARAM_cice_vars}
+        EXPS=${EXPS//,/}
         source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
-        ${SCRIPT_DIR}/CICE_maps.py -d ${TOPDIR_OUTPUT}/${EXP} -e ${EXP} -v ${VAR} -p ${POLE} -fd ${TOPDIR_FIGURES} -od ${TOPDIR_OBS}
+        ${SCRIPT_DIR}/CICE_maps.py -d ${TOPDIR_OUTPUT}/${EXP} -e ${EXP} -v ${VAR} -p ${POLE} -fd ${TOPDIR_FIGURES} -od ${TOPDIR_OBS} -ae ${EXPS}
         """
         [[[directives]]]
             --time = 08:00:00

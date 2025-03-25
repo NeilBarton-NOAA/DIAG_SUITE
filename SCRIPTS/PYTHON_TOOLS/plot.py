@@ -1,6 +1,7 @@
 import calendar
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 
 colors = ['maroon','blue','darkgreen']
 class ice_extent(object):
@@ -12,9 +13,9 @@ class ice_extent(object):
         name = 'ice_extent_' + cls.title.replace(' ','_') + '_' 
         for i, ds in enumerate(cls.dats):
             if cls.times.size == 1:
-                dat = ds['extent'].sel(time = cls.times, hemisphere = cls.pole)
+                dat = ds['extent'].sel(time = cls.times, pole = cls.pole)
             else:
-                dat = ds['extent'].sel(time = cls.times, hemisphere = cls.pole).mean('time')
+                dat = ds['extent'].sel(time = cls.times, pole = cls.pole).mean('time')
             if 'member' in dat.dims:
                 plt.plot(dat['tau'].values, dat.mean('member').values, color = colors[i], linewidth = 2.0, label = ds.test_name )
                 plt.fill_between(dat['tau'].values, dat.min('member').values, dat.max('member').values, color = colors[i], alpha = 0.5)
@@ -27,13 +28,13 @@ class ice_extent(object):
         for j, obs in enumerate(cls.obss):
             if cls.times.size == 1:
                 t_last = cls.times + np.timedelta64(last_tau, 'D')
-                ob = obs['extent'].sel(time = slice(cls.times, t_last), hemisphere = cls.pole).values
+                ob = obs['extent'].sel(time = slice(cls.times, t_last), pole = cls.pole).values
             else:
                 # loop over times
                 ob = []
                 for t in cls.times:
                     t_last = t + np.timedelta64(last_tau, 'D')
-                    ob.append(obs['extent'].sel(time = slice(t, t_last), hemisphere = cls.pole).values)
+                    ob.append(obs['extent'].sel(time = slice(t, t_last), pole = cls.pole).values)
                 ob = np.mean(np.array(ob), axis = 0)
             try:
                 text = obs.test_name
@@ -56,7 +57,7 @@ class ice_extent(object):
         plt.close()
         #exit(1)
 
-def ice_extent_imshowdiff(DAT1, DAT2, pole = 'north'):
+def monthdiff_imshow(DAT1, DAT2, var = 'extent', pole = 'north'):
     dat_plot = []
     y_label = []
     try:
@@ -69,7 +70,6 @@ def ice_extent_imshowdiff(DAT1, DAT2, pole = 'north'):
         d1_time = DAT1['time'].isel(time = DAT1['time'].dt.month.isin([m]))
         d2_time = DAT2['time'].isel(time = DAT2['time'].dt.month.isin([m]))
         same_times = np.array(list(set(d1_time.values) & set(d2_time.values)))
-        print(same_times)
         if len(same_times) > 0:
             for ds in [DAT1, DAT2]:
                 if 'tau' not in ds.keys():
@@ -78,17 +78,18 @@ def ice_extent_imshowdiff(DAT1, DAT2, pole = 'north'):
                     ob = []
                     for t in same_times:
                         t_last = t + np.timedelta64(last_tau, 'D')
-                        obs = ds['extent'].sel(time = slice(t, t_last), hemisphere = pole).values
+                        obs = ds[var].sel(time = slice(t, t_last), pole = pole).values
                         ob.append(np.interp(taus, np.arange(0, obs.size), obs))
                     d = np.mean(np.array(ob), axis = 0)
                 else:
                     if 'member' in ds.dims:
-                        d = ds['extent'].sel(time = same_times, hemisphere = pole).mean(['time','member'])
+                        d = ds[var].sel(time = same_times, pole = pole).mean(['time','member'])
                     else:
-                        d = ds['extent'].sel(time = same_times, hemisphere = pole).mean('time')
+                        d = ds[var].sel(time = same_times, pole = pole).mean('time')
                 d = np.ma.masked_where(d == 0, d)
                 dat.append(d)
-            diff = dat[0] - dat[1]
+            le = min(dat[0].size, dat[1].size)
+            diff = dat[0][0:le] - dat[1][0:le]
             if (diff.size > np.max(taus)): # if taus aren't integers of days
                 diff = np.interp(np.arange(np.min(taus), np.max(taus) + 1), taus, diff)
         else:
@@ -96,9 +97,9 @@ def ice_extent_imshowdiff(DAT1, DAT2, pole = 'north'):
         dat_plot.append(diff)
     dat_plot = np.array(dat_plot)
     try:
-        title = pole[0].upper() + 'H: ' + DAT1.test_name + ' minus ' + DAT2.test_name
+        title = pole[0].upper() + 'H ' + var.upper() + ' Difference: ' + DAT1.test_name + ' minus ' + DAT2.test_name
     except:
-        title = pole[0].upper() + 'H: DAT1 minus DAT2'
+        title = pole[0].upper() + 'H ' + var.upper() + ' Difference:  DAT1 minus DAT2'
     print(title)
     print(' Min:', np.round(np.nanmin(dat_plot),2), '  Max:', np.round(np.nanmax(dat_plot),2))
     try:
@@ -122,6 +123,7 @@ def ice_extent_imshowdiff(DAT1, DAT2, pole = 'north'):
                     interpolation = 'none')
     cbar = plt.colorbar(im)
     cbar.set_label('million sq km') 
+    taus = taus[0:le]
     taus = np.arange(np.min(taus), np.max(taus) + 1)
     plt.xticks(np.arange(taus.size)[::3], taus[::3].astype('int'))
     plt.yticks(np.arange(12), y_label)
@@ -132,7 +134,7 @@ def ice_extent_imshowdiff(DAT1, DAT2, pole = 'north'):
         save_dir = DAT1.save_dir
     except:
         save_dir = './'
-    fig_name = save_dir + '/' + pole[0].upper() + 'H_extent_MONTHvsTAU_' + title[2::].replace(' ','').replace(':','').replace('/','') + '.png'
+    fig_name = save_dir + '/' + pole[0].upper() + 'H_' + var + '_MONTHvsTAU_' + title[2::].replace(' ','').replace(':','').replace('/','') + '.png'
     plt.savefig(fig_name, bbox_inches = 'tight')
     plt.close()
     print('SAVED:', fig_name)
@@ -143,11 +145,19 @@ class iiee(object):
     @classmethod
     def create(cls):
         exp_title = ''
+        if len(cls.DATS) > 1:
+            tau_max = []
+            for i, dat in enumerate(cls.DATS):
+                tau_max.append((dat['tau'].max()).values)
+            tau_max = np.max(tau_max)
         for j, ob in enumerate(cls.OBS_TYPES):
             for i, dat in enumerate(cls.DATS):
-                if dat.test_name not in exp_title:
-                    exp_title = exp_title + dat.test_name + '_'
-                if (i == 0) or (ob.split('_')[-1] == 'conc'):
+                plot = True
+                if (dat['tau'].max().values != tau_max) and ('persistence' in ob): plot = False
+                if (dat['tau'].max().values != tau_max) and ('climatology' in ob): plot = False
+                if plot: 
+                    if dat.test_name not in exp_title:
+                        exp_title = exp_title + dat.test_name + '_'
                     if cls.times.size == 1:
                         data = dat['iiee'].sel(obs_type = ob, pole = cls.pole, time = cls.times)
                     else:
@@ -187,55 +197,48 @@ class iiee(object):
         #plt.show()
         plt.close()
                
-#class iiee_min_per_month(object): 
-#    e = e.replace(',','').strip()
-#        f = tdir + '/' + e + '/iiee.nc'
-#        dat = xr.open_dataset(f)
-#        dat['tau'] = dat['tau'] / 24.0
-#        ob_type_month, y_label = [], []
-#        for month in np.arange(1,13):
-#            y_label.append(calendar.month_abbr[month])
-#            if month < 12:
-#                c_time = dat['time'].isel(time = dat['time'].dt.month.isin([month]))
-#                title = 'IIEE: ' + calendar.month_abbr[month].upper() + ' ' + e 
-#                fig_name = save_dir + '/' + pole[0].upper() + 'H_' + calendar.month_abbr[month].upper() + '_IIEE.png'
-#            else:
-#                c_time = dat['time']
-#                title = 'IIEE: ' + e 
-#                fig_name = save_dir + '/' + pole[0].upper() + 'H_ALL_TIMES_IIEE.png'
-#            #obs_types = dat['obs_type'].values
-#            if (c_time.size > 0):
-#                # save data for comparison
-#                min_ob_type = []
-#                for ob in obs_types:
-#                    print(ob)
-#                    if 'ice_con' in ob:
-#                        label = 'GEFS/EP4'
-#                    else:
-#                        label = ob.capitalize()
-#                    #label = ob.replace('_seaice_conc','')
-#                    #label = label.replace('_','-')
-#                    data = dat['iiee'].sel(obs_type = ob, pole = pole, time = c_time).mean('time')
-#                    if 'member' in data.dims:
-#                        plt.plot(data['tau'].values, data.mean('member').values, linewidth = 2.0, label = label )
-#                        plt.fill_between(data['tau'].values, data.min('member').values, data.max('member').values, alpha = 0.5)
-#                        min_ob_type.append(data.mean('member').values)
-#                    else:
-#                        data.plot(linewidth = 2.0, label = label)
-#                        min_ob_type.append(data.values)
-#                    colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
-#                    #ax = kwargs.pop('ax', plt.gca())
-#                    #base_line, = ax.plot(x, y, **kwargs)
-#                    #print(base_line.get_color())
-#                ob_type_month.append(np.argmin(np.array(min_ob_type), axis = 0))
-#                if pole == 'north':
-#                    t = 'Arctic '
-#                elif pole == 'south':
-#                    t = 'Antarctic '
-#                plt.title(t + title)
-#                plt.ylabel('IIEE')
-#                plt.xlabel('Forecast Day')
-#                plt.legend(frameon = False)
-#                #plt.show()
-#                print(fig_name)
+class iiee_min_imshow(object):
+    pole = 'north'
+    save_dir = './'
+    @classmethod
+    def create(cls):
+        exp_title = ''
+        fig = plt.figure(figsize=(8, 6))
+        ax = fig.add_subplot(1,1,1)
+        ob_type_month, y_label = [], []
+        for m in np.arange(12) + 1:
+            plot_data = []
+            y_label.append(calendar.month_abbr[m])
+            times = cls.DAT['time'].isel(time = cls.DAT['time'].dt.month.isin([m]))
+            min_ob_type = []
+            for j, ob in enumerate(cls.OBS_TYPES):
+                data = cls.DAT['iiee'].sel(obs_type = ob, pole = cls.pole, time = times).mean('time')
+                if 'member' in cls.DAT.dims:
+                    data = data.mean('member') 
+                min_ob_type.append(data.values)
+            ob_type_month.append(np.argmin(np.array(min_ob_type),axis = 0))
+        # get colors 
+        cmap = ListedColormap(["blue", "grey", "black"])
+        im = ax.imshow(ob_type_month, cmap = cmap, 
+                        vmin = 0, vmax = len(cls.OBS_TYPES)-1,
+                        aspect = 'auto', interpolation = 'none')
+        for ii, ob in enumerate(cls.OBS_TYPES):
+            print(ob)
+            c = cmap(ii/(len(cls.OBS_TYPES) - 1))
+            if ob.split('_')[-1] == 'conc':
+                tt = cls.DAT.test_name
+            else:
+                tt = ob.split('_')[-1].capitalize()
+            plt.text(np.max(data['tau'].values) + 2 , 4 + ii, tt, color = c, fontsize = 16, fontweight = 'bold')
+        taus = data['tau'].values
+        plt.xticks(np.arange(len(data['tau'].values))[::3], data['tau'].values[::3].astype('int'))
+        plt.yticks(np.arange(12), y_label)
+        ax.set_xlabel('Forecast Day')
+        if cls.pole == 'north':
+            title = cls.DAT.test_name + ': NH Min IIEE' 
+        elif cls.pole == 'south':
+            title = cls.DAT.test_name + ': SH Min IIEE'
+        ax.set_title(title, fontsize = 16, fontweight = 'bold')
+        plt.tight_layout()
+        #plt.show()
   
