@@ -32,14 +32,12 @@ var = 'aice'
 # get observations
 ICEOBS = []
 #ICEOBS.extend(npb.iceobs.get_icecon_nt(obs_dir))
-ICEOBS.extend(npb.iceobs.get_icecon_bs(obs_dir))
+#ICEOBS.extend(npb.iceobs.get_icecon_bs(obs_dir))
 ICEOBS.extend(npb.iceobs.get_icecon_cdr(obs_dir))
 CLIMO = npb.iceobs.get_icecon_daily_climatology(obs_dir)
 
 ########################
 # get model results
-f = tdir + '/cice_area.nc'
-area = xr.open_dataset(f)
 file_search = tdir + '/interp_obs_grids_' + var + '*.nc'
 files = glob.glob(file_search)
 files.sort()

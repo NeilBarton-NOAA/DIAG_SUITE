@@ -25,15 +25,11 @@ parser.add_argument('-d', '--dirs', action = 'store', nargs = 1, \
 args = parser.parse_args()
 tdir = args.dirs[0]
 var = 'aice'
-f = tdir + '/cice_area.nc'
-area = xr.open_dataset(f)
-print(tdir)
+
 file_search = tdir + '/' + var + '_*.nc'
 print(file_search)
-D = xr.open_mfdataset(file_search, combine = 'nested', concat_dim = 'time', decode_times = True)
-#D = xr.open_mfdataset(file_search) #, combine = 'nested', concat_dim = 'time', decode_times = False)
-D['tau'] = D['tau'] / 24.0
+D = xr.open_mfdataset(file_search, coords='minimal')
+D['tarea'] = D['tarea'].isel(time=0)
 D = D.assign_attrs({'data_dir' : tdir})
 D = D.assign_attrs({'extent_file' : tdir + '/ice_extent.nc'})
-print(D)
-D = npb.icecalc.extent(D, area, var = var)
+D = npb.icecalc.extent(D, var = var)

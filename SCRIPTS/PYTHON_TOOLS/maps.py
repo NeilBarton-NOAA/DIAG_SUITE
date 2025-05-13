@@ -29,17 +29,17 @@ def getICEdomain(domain):
         kw = dict(central_latitude=-90, central_longitude=0, true_scale_latitude=-70)
     return x, y, kw
 
-class icecon(object):
+class CICE(object):
     save_dir = './'
     @classmethod
     def create(cls):
         olon, olat = cls.dat['TLON'], cls.dat['TLAT']
-        cmap_DAT = plt.get_cmap('terrain_r')
+        d_tau = cls.dat['forecast_hour'].values[0] if cls.tau == 0 else cls.tau
         if cls.times.size == 1:
-            dat = cls.dat[cls.var_name].sel(time = cls.times, tau = cls.tau)
+            dat = cls.dat[cls.var_name].sel(time = cls.times, forecast_hour = d_tau)
         else:
-            dat = cls.dat[cls.var_name].sel(time = cls.times, tau = cls.tau).mean(dim = 'time') 
-        t_array = npb.timetools.time_plus_tau(cls.times.values, cls.tau*24)
+            dat = cls.dat[cls.var_name].sel(time = cls.times, forecast_hour = d_tau).mean(dim = 'time') 
+        t_array = npb.timetools.time_plus_tau(cls.times.values, cls.tau)
         if cls.times.size == 1:
             obs = cls.obs['ice_con'].sel(time = t_array)
         else:
@@ -53,10 +53,19 @@ class icecon(object):
             ax = fig.add_subplot(1,1,1, projection = ccrs.SouthPolarStereo())
             ax = npb.base_maps.Antarctic(ax, labels = False)
             t_lon, t_lat = 0.0, -43.
+        if cls.var_name == 'aice':
+            vmin = 0.15
+            vmax = 1.0
+            cmap_DAT = plt.get_cmap('terrain_r')
+        else:
+            vmin = dat.min().values
+            vmax = dat.max().values
+            dat = dat.where(dat > 0)
+            cmap_DAT = plt.get_cmap('jet')
         im = ax.pcolormesh(olon, olat, dat, 
             transform=ccrs.PlateCarree(), 
-            vmin = 0.15,
-            vmax = 1.0,
+            vmin = vmin,
+            vmax = vmax,
             cmap = cmap_DAT)
         ax = npb.base_maps.add_features(ax)
         ax.text(t_lon, t_lat, cls.title, \
@@ -65,12 +74,14 @@ class icecon(object):
             transform = ccrs.PlateCarree(), \
             ha = 'center', va = 'center')
         x, y, kw = npb.maps.getICEdomain(cls.pole)
-        ax.contour(x, y, obs, [0.15], colors = ['k'], linewidths = 2.0, transform = ccrs.Stereographic(**kw))
+        ax.contour(x, y, obs, [0.15], colors = ['#A09898'], linewidths = 1.5, transform = ccrs.Stereographic(**kw))
         cbar_ax = fig.add_axes([0.25, 0.07, 0.52, 0.035])
-        fig.colorbar(im, cax = cbar_ax, orientation='horizontal' )
+        cbar = fig.colorbar(im, cax = cbar_ax, orientation='horizontal' )
+        cbar_label = {'aice' : 'Concentration', 'hi' : 'Thickness (m)' }
+        cbar.set_label(cbar_label[cls.var_name])
         fig_name = cls.save_dir + '/' + cls.pole[0].upper() + 'H_map' \
-            + cls.title.replace(' ','').replace(':','') + '.png'
+            + cls.title.replace(' ','').replace(':','') + '_' + cls.var_name + '.png'
         print('SAVED:', fig_name)
         plt.savefig(fig_name, bbox_inches = 'tight')
-        #plt.show()
+        plt.show()
 

@@ -11,6 +11,11 @@ case ${WORKFLOW} in
     local_download_dir=${TOPDIR_OUTPUT}/${EXP}
     local_ice_dir=${local_download_dir}/${RUN}.${dtg:0:8}/${dtg:8:10}/mem*/model/ice/history   
     ;;
+    'GFS')
+    hpss_file=${SRC_DIR}/${dtg}/ice_6hravg.tar
+    local_download_dir=${TOPDIR_OUTPUT}/${EXP}
+    local_ice_dir=${local_download_dir}/${RUN}.${dtg:0:8}/${dtg:8:10}/model/ice/history   
+    ;;
     *)
     echo "FATAL: unknown workflow directory structure"
     exit 1

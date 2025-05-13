@@ -51,7 +51,6 @@ for i, e in enumerate(exps):
     e = e.replace(',','').strip()
     f = tdir + '/' + e + '/iiee.nc'
     dat = xr.open_dataset(f)
-    dat['tau'] = dat['tau'] / 24.0
     dat = dat.assign_attrs({'test_name' : e})
     DAT.append(dat)
 

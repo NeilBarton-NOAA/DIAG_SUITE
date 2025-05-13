@@ -11,6 +11,8 @@ if [[ ${machine:0:3} == hfe || ${machine} == h*[cm]* ]]; then
     WORK_DIR=/scratch2/NCEPDEV/stmp3
 elif [[ ${machine} == hercules* ]]; then
     WORK_DIR=/work/noaa/marine
+elif [[ ${machine} == gaea* || ${machine} == dtn* || ${machine} == c6* ]]; then
+    WORK_DIR=/gpfs/f6/sfs-emc/scratch
 else
     echo 'FATAL: MACHINE UNKNOWN'
     exit 1
@@ -31,11 +33,14 @@ case ${EXP} in
         WORKFLOW="GW"
         RUN="gefs"
         ;;
+    'GFSRETRO')    
+        SRC_DIR='/5year/NCEPDEV/emc-global/emc.glopara/WCOSS2/GFSv17/retro*'
+        WORKFLOW="GFS"
+        RUN="gfs"
+        ;;
      'DUMMY')
         echo "DUMMY EXP for scripts"
         ;;
 * ) echo 'FATAL: case unknowned ' && exit 1
 esac
-
-
 

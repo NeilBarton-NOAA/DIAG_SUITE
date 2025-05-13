@@ -11,15 +11,12 @@ echo ${var%%:*}
 
 correct_n_files () {
 dir=${1}
-ENS_MEMBERS=${2}
-MEMS=$(( ENS_MEMBERS + 1 ))
+# no check for ensembles at this point
 CORRECT=F
-nfiles=$(ls ${local_ice_dir}/*nc 2>/dev/null | wc -l )
-EVEN_FILES=$(( ${nfiles} % ${MEMS} ))
-#FPD=$(( ${nfiles} / ${MEMS} ))
+nfiles=$(ls ${local_ice_dir}/*nc | grep -v '.ic.nc' 2>/dev/null | wc -l )
 if (( ${nfiles} > 0 )); then
-    SIZES=$( ls -l ${local_ice_dir}/*nc | awk '{print $5}' | sort -u | wc -l )
-    if (( ${SIZES} == 1 && ${EVEN_FILES} == 0 )); then
+    SIZES=$( ls -l ${local_ice_dir}/*nc | grep -v '.ic.nc' | awk '{print $5}' | sort -u | wc -l )
+    if (( ${SIZES} == 1 )); then
         CORRECT=T
     fi
 fi

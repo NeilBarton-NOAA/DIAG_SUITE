@@ -67,74 +67,77 @@ if var == 'aice':
 else:
     file_search = '/' + var + '*.nc'
 
-DAT = xr.open_mfdataset(tdir + file_search, combine = 'nested', concat_dim = 'time', decode_times = True)
-#DAT = xr.open_mfdataset(file_search, combine = 'nested', concat_dim = 'time', decode_times = False)
+files = sorted(glob.glob(tdir + file_search))
+DAT = xr.open_mfdataset(files, coords='minimal')
+
 if 'member' in DAT.dims:
     DAT = DAT.mean('member')
-taus = DAT['tau'].values
+taus = DAT['forecast_hour'].values
 times = DAT['time'].values
+
 if all_exps:
     for e in all_exps:
         if e != exp:
+            search = tdir + '/../' + e + file_search
             print('Comparing times and taus to', e)
-            print(tdir + '/../' + e + file_search)
-            DAT2 = xr.open_mfdataset(obs_dir + '/../' + e + file_search, combine = 'nested', concat_dim = 'time', decode_times = True)
+            print(search)
+            files = sorted(glob.glob(search))
+            DAT2 = xr.open_mfdataset(files, coords='minimal')
             times = np.array(list(set(DAT2['time'].values) & set(times)))
-            taus = np.array(list(set(DAT2['tau'].values) & set(taus)))
+            taus = np.array(list(set(DAT2['forecast_hour'].values) & set(taus)))
             del DAT2
-taus = taus / 24.0
-TAUS = [min(taus)] 
-TAUS.append(max(taus)) 
+taus = taus/24.0
+TAUS = [int(min(taus))*24] 
+TAUS.append(int(max(taus))*24)
 DAT = DAT.sel(time = times)
 times = DAT['time']
-DAT['tau'] = DAT['tau'] / 24 
 
 #######################
-npb.maps.icecon.save_dir = save_dir
-npb.maps.icecon.dat = DAT
-npb.maps.icecon.obs = OBS[p]
-npb.maps.icecon.var_name = var
-npb.maps.icecon.pole = pole
-npb.maps.icecon.times = times
+npb.maps.CICE.save_dir = save_dir
+npb.maps.CICE.dat = DAT
+npb.maps.CICE.obs = OBS[p]
+npb.maps.CICE.var_name = var
+npb.maps.CICE.pole = pole
+npb.maps.CICE.times = times
 for t in TAUS:
-    npb.maps.icecon.tau = t
-    npb.maps.icecon.title = exp + ' for All Times: Forecast Day ' + str(t)
-    npb.maps.icecon.create()
+    npb.maps.CICE.tau = t
+    npb.maps.CICE.title = exp + ' for All Times: Forecast Day ' + str(t)
+    npb.maps.CICE.create()
 # plot for each time
 if (len(times) < 20):
     for t in times:
-        npb.maps.icecon.times = t
+        npb.maps.CICE.times = t
         for tau in TAUS:
-            npb.maps.icecon.tau = tau
-            npb.maps.icecon.title = exp + ' for ' + \
+            npb.maps.CICE.tau = tau
+            npb.maps.CICE.title = exp + ' for ' + \
                 np.datetime_as_string(t, timezone='UTC')[0:10] + \
-                ': Forecast Day ' + str(tau)
-            npb.maps.icecon.create()
+                ': Forecast Day ' + str(tau/24)
+            npb.maps.CICE.create()
 # plot by month
 months = np.unique(DAT['time'].sel(time = times).dt.month)
 for m in months:
     m_times = times.isel(time = times.dt.month.isin([m]))
-    npb.maps.icecon.times = m_times
+    npb.maps.CICE.times = m_times
     for tau in TAUS:
-        npb.maps.icecon.tau = tau
-        npb.maps.icecon.title = exp + ' for ' + \
+        npb.maps.CICE.tau = tau
+        npb.maps.CICE.title = exp + ' for ' + \
                 calendar.month_abbr[m].upper() + \
-                ': Forecast Day ' + str(tau)
-        npb.maps.icecon.create()
+                ': Forecast Day ' + str(tau/24)
+        npb.maps.CICE.create()
 # plot winter and summer cases
 m_times = times.isel(time = times.dt.month.isin([1,2,12]))
 if m_times.size > 5:
-    npb.maps.icecon.times = m_times
+    npb.maps.CICE.times = m_times
     for tau in TAUS:
-        npb.maps.icecon.tau = tau
-        npb.maps.icecon.title = exp + ' for Winter' + \
-            ': Forecast Day ' + str(tau)
-        npb.maps.icecon.create()
+        npb.maps.CICE.tau = tau
+        npb.maps.CICE.title = exp + ' for Winter' + \
+            ': Forecast Day ' + str(tau/24)
+        npb.maps.CICE.create()
 m_times = times.isel(time = times.dt.month.isin([6,7,8]))
 if m_times.size > 5:
-    npb.maps.icecon.times = m_times
+    npb.maps.CICE.times = m_times
     for tau in TAUS:
-        npb.maps.icecon.tau = tau
-        npb.maps.icecon.title = exp + ' for Summer' + \
-            ': Forecast Day ' + str(tau)
-        npb.maps.icecon.create()
+        npb.maps.CICE.tau = tau
+        npb.maps.CICE.title = exp + ' for Summer' + \
+            ': Forecast Day ' + str(tau/24)
+        npb.maps.CICE.create()

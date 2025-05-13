@@ -35,7 +35,7 @@ exps = args.exps
 save_dir = args.figuredir[0]
 obs_dir = args.obsdir[0]
 var = 'aice'
-
+os.makedirs(save_dir, exist_ok=True)
 ####################################
 # grab ice extent from models
 DAT = []
@@ -64,8 +64,12 @@ else:
 ####################################
 # grab ice extent observations
 OBS = []
-OBS.append(npb.iceobs.get_extentobs_NASA(obs_dir))
-OBS.append(npb.iceobs.get_extentobs_bootstrap(obs_dir))
+#OBS.append(npb.iceobs.get_extentobs_NASA(obs_dir))
+#OBS.append(npb.iceobs.get_extentobs_bootstrap(obs_dir))
+OBS.append(npb.iceobs.get_extentobs_CDR(obs_dir, 'cdr_seaice_conc'))
+OBS.append(npb.iceobs.get_extentobs_CDR(obs_dir, 'nsidc_nt_seaice_conc'))
+OBS.append(npb.iceobs.get_extentobs_CDR(obs_dir, 'nsidc_bt_seaice_conc'))
+#OBS.append(npb.iceobs.get_extentobs_noaa_g02135(obs_dir))
 
 ####################################
 # plot month and sea ice extent 

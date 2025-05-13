@@ -2,8 +2,6 @@
 set -xu
 SCRIPT_DIR=${SCRIPT_DIR:-$(dirname "$0")}
 name=${1}
-name=ice_extent
-name=ice_concentration
 source ${SCRIPT_DIR}/experiment_options.sh DUMMY DUMMY 
 outdir=${TOPDIR_OBS}
 

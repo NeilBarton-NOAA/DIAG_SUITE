@@ -3,6 +3,7 @@ set -eux
 dtg=${1}
 EXP=${2}
 
+exit 0
 SCRIPT_DIR=$(dirname "$0")
 source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${dtg}
 source ${SCRIPT_DIR}/functions.sh ${EXP}

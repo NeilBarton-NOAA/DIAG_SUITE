@@ -12,34 +12,28 @@ if 'hfe' in platform.uname()[1]:
     exit(1)
 ########################
 import argparse
-import glob 
 import os
 import sys
+import glob 
 import xarray as xr
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) )
 import PYTHON_TOOLS as npb
 
-parser = argparse.ArgumentParser( description = "Interp data and writes fields in Ones and Zeros")
-parser.add_argument('-d', '--dirs', action = 'store', nargs = 1, \
-        help="top directory to find model output files")
+parser = argparse.ArgumentParser( description = "Calculates Ice Extent from Observational Datasets")
 parser.add_argument('-od', '--obsdir', action = 'store', nargs = 1, \
         help="top directory for observations")
 args = parser.parse_args()
-tdir = args.dirs[0]
-var = 'aice'
 obs_dir = args.obsdir[0]
 
 ########################
 # get observations
-OBS = []
-OBS.extend(npb.iceobs.get_icecon_nt(obs_dir))
+SAMPLE = npb.iceobs.get_extentobs_NASA(obs_dir)
+print(SAMPLE)
+print(' ')
+print(' ')
+print(' ')
 
-########################
-# get model results
-files = glob.glob(tdir + '/' + var + '*.nc')
-files.sort()
-for f in files:
-    print(f)
-    DAT = xr.open_dataset(f)
-    DAT = DAT.assign_attrs({'file_name' : f }) 
-    npb.icecalc.interp(DAT, OBS, var = var, force_calc = False)
+variables = ['nsidc_nt_seaice_conc', 'nsidc_bt_seaice_conc', 'cdr_seaice_conc']
+for v in variables:
+    OBS = npb.iceobs.get_extentobs_CDR(obs_dir, v)
+

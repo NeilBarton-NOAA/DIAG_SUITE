@@ -28,9 +28,36 @@ def parse_noaacdr(files, var, file_name):
     print('wrote:', file_name)
     return obs
 
+def get_extentobs_CDR(obs_dir, var = 'cdr_seaice_conc'):
+    ice_dir = obs_dir + '/ice_extent/noaa_cdr'
+    if not os.path.exists(ice_dir):
+        os.makedirs(ice_dir)
+    poles = ['north', 'south']
+    save_file = ice_dir + '/noaa_cdr_' + var + '_extent.nc'
+    if os.path.exists(save_file):
+        print(save_file)
+        ds = xr.open_dataset(save_file)
+    else:
+        print('calculating extent')
+        obs = npb.iceobs.get_icecon_cdr(obs_dir, var)
+        ds = xr.Dataset(coords={"time": [], 'pole': ['north', 'south']})
+        ds['time'] = obs[0]['time'].values
+        ds['extent'] = (('time', 'pole'), np.empty((ds['time'].size,2)))
+        for ob in obs:
+            grid_area = int(ob.spatial_resolution.strip('km'))**2.
+            p = 0 if ob.pole == 'NH' else 1
+            t = ob['time'].values[0]
+            ob['ice_con'] = ob['ice_con'].where(ob['ice_con'] < 2, 0)
+            ob['ice_con'] = ob['ice_con'].where(ob['ice_con'] < 0.15, 1, 0)
+            ds['extent'][:,p] = ob['ice_con'].sum(dim = ['x','y']) * grid_area / 1e6
+        ds = ds.assign_attrs({'test_name': var})
+        ds.to_netcdf(save_file)
+        print("write:", save_file)
+    return ds
+
 def get_extentobs_NASA(obs_dir):
     ice_dir = obs_dir + '/ice_extent/nasateam'
-    files = ['gsfc.nasateam.daily.extent.1978-2021.n', 'gsfc.nasateam.daily.extent.1978-2021.s']
+    files = ['gsfc.nasateam.daily.extent.1978-2022.n', 'gsfc.nasateam.daily.extent.1978-2022.s']
     for ii, f in enumerate(files):
         print(ice_dir + '/' + f)
         #ob = pd.read_csv(ice_dir + '/' + f, delim_whitespace = True)
@@ -69,7 +96,7 @@ def get_extentobs_NASA(obs_dir):
 
 def get_extentobs_bootstrap(obs_dir):
     ice_dir = obs_dir + '/ice_extent/bootstrap'
-    files = ['gsfc.bootstrap.daily.extent.1978-2021.n', 'gsfc.bootstrap.daily.extent.1978-2021.s']
+    files = ['gsfc.bootstrap.daily.extent.1978-2022.n', 'gsfc.bootstrap.daily.extent.1978-2022.s']
     for ii, f in enumerate(files):
         print(ice_dir + '/' + f)
         #ob = pd.read_csv(ice_dir + '/' + f, delim_whitespace = True)
@@ -193,9 +220,8 @@ def get_icecon_bs(obs_dir):
         ob.append(obs)
     return ob[0], ob[1]
 
-def get_icecon_cdr(obs_dir):
+def get_icecon_cdr(obs_dir, var = 'cdr_seaice_conc'):
     ice_dir = obs_dir + '/ice_concentration/noaa_cdr'
-    var = 'cdr_seaice_conc'
     poles = ['north', 'south']
     ob = []
     for ii, pole in enumerate(poles):

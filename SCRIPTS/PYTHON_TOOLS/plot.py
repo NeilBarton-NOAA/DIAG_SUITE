@@ -12,28 +12,36 @@ class ice_extent(object):
         # plot model data with tau
         name = 'ice_extent_' + cls.title.replace(' ','_') + '_' 
         for i, ds in enumerate(cls.dats):
+            model_tau = ds['forecast_hour'] / 24.0
             if cls.times.size == 1:
                 dat = ds['extent'].sel(time = cls.times, pole = cls.pole)
             else:
                 dat = ds['extent'].sel(time = cls.times, pole = cls.pole).mean('time')
             if 'member' in dat.dims:
-                plt.plot(dat['tau'].values, dat.mean('member').values, color = colors[i], linewidth = 2.0, label = ds.test_name )
-                plt.fill_between(dat['tau'].values, dat.min('member').values, dat.max('member').values, color = colors[i], alpha = 0.5)
+                plt.plot(model_tau.values, dat.mean('member').values, 
+                        color = colors[i], 
+                        linewidth = 2.0, 
+                        label = ds.test_name )
+                plt.fill_between(model_tau.values, 
+                        dat.min('member').values, 
+                        dat.max('member').values, 
+                        color = colors[i], 
+                        alpha = 0.5)
             else:
-                dat.plot(linewidth = 2.0, color = colors[i], label = ds.test_name)
+                plt.plot(model_tau.values, dat.values, color = colors[i], label = ds.test_name)
             name = name + ds.test_name.replace(':', '').replace(' ','').replace('/','') + '_'
         # observations; get times for obs
-        last_tau = int(ds['tau'][-1].values)
-        styles = ['-','--']
+        last_tau = model_tau.values[-1]
+        styles = ['-','--','-.']
         for j, obs in enumerate(cls.obss):
             if cls.times.size == 1:
-                t_last = cls.times + np.timedelta64(last_tau, 'D')
+                t_last = cls.times + np.timedelta64(int(last_tau*24.0), 'h')
                 ob = obs['extent'].sel(time = slice(cls.times, t_last), pole = cls.pole).values
             else:
                 # loop over times
                 ob = []
                 for t in cls.times:
-                    t_last = t + np.timedelta64(last_tau, 'D')
+                    t_last = t + np.timedelta64(int(last_tau*24.0), 'h')
                     ob.append(obs['extent'].sel(time = slice(t, t_last), pole = cls.pole).values)
                 ob = np.mean(np.array(ob), axis = 0)
             try:
@@ -47,7 +55,7 @@ class ice_extent(object):
                 name = name + text.replace(':', '').replace(' ','').replace('/','')
         fig_name = cls.save_dir + '/' + cls.pole[0].upper() + 'H_' + name + '.png'
         plt.legend(frameon = False)
-        plt.xlim(int(ds['tau'][0].values), int(ds['tau'][-1].values))
+        plt.xlim(model_tau[0], model_tau[-1])
         plt.xlabel('Forecast Day')
         plt.ylabel(cls.pole[0].upper() + 'H Sea Ice Extent')
         plt.title(cls.pole[0].upper() + 'H Sea Ice Extent: ' + cls.title)
@@ -55,7 +63,6 @@ class ice_extent(object):
         print('SAVED:', fig_name)
         #plt.show()
         plt.close()
-        #exit(1)
 
 def monthdiff_imshow(DAT1, DAT2, var = 'extent', pole = 'north'):
     dat_plot = []
@@ -148,13 +155,15 @@ class iiee(object):
         if len(cls.DATS) > 1:
             tau_max = []
             for i, dat in enumerate(cls.DATS):
-                tau_max.append((dat['tau'].max()).values)
+                tau_max.append((dat['forecast_hour'].max()).values)
             tau_max = np.max(tau_max)
+        else:
+            tau_max = cls.DATS[0]['forecast_hour'].max().values
         for j, ob in enumerate(cls.OBS_TYPES):
             for i, dat in enumerate(cls.DATS):
                 plot = True
-                if (dat['tau'].max().values != tau_max) and ('persistence' in ob): plot = False
-                if (dat['tau'].max().values != tau_max) and ('climatology' in ob): plot = False
+                if (dat['forecast_hour'].max().values != tau_max) and ('persistence' in ob): plot = False
+                if (dat['forecast_hour'].max().values != tau_max) and ('climatology' in ob): plot = False
                 if plot: 
                     if dat.test_name not in exp_title:
                         exp_title = exp_title + dat.test_name + '_'
@@ -179,10 +188,10 @@ class iiee(object):
                         style = '-'
                         c = colors[i]
                     if 'member' in data.dims:
-                        plt.plot(data['tau'].values, data.mean('member').values, linewidth = 2.0, color = c, linestyle = style, label = label )
-                        plt.fill_between(data['tau'].values, data.min('member').values, data.max('member').values, color = c, alpha = 0.5)
+                        plt.plot(dat['forecast_hour'].values/24, data.mean('member').values, linewidth = 2.0, color = c, linestyle = style, label = label )
+                        plt.fill_between(dat['forecast_hour'].values/24, data.min('member').values, data.max('member').values, color = c, alpha = 0.5)
                     else:
-                        data.plot(linewidth = 2.0, color = c, linestyle = style, label = label)
+                        plt.plot(dat['forecast_hour'].values/24, data.values, linewidth = 2.0, color = c, linestyle = style, label = label)
         if cls.pole == 'north':
             t = 'Arctic '
         elif cls.pole == 'south':
