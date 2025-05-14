@@ -12,7 +12,8 @@ case ${WORKFLOW} in
     local_ice_dir=${local_download_dir}/${RUN}.${dtg:0:8}/${dtg:8:10}/mem*/model/ice/history   
     ;;
     'GFS')
-    hpss_file=${SRC_DIR}/${dtg}/ice_6hravg.tar
+    dir=$( hsi -q ls -l ${SRC_DIR}/${dtg}/ice_6hravg.tar 2>&1 | grep NCEPDEV )
+    hpss_file=${dir::-1}/ice_6hravg.tar
     local_download_dir=${TOPDIR_OUTPUT}/${EXP}
     local_ice_dir=${local_download_dir}/${RUN}.${dtg:0:8}/${dtg:8:10}/model/ice/history   
     ;;

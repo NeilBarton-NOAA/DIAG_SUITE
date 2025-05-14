@@ -80,7 +80,7 @@ for pole in ['north', 'south']:
     npb.plot.iiee.title = 'All Times'
     npb.plot.iiee.create()     
     # plot for each time
-    if (len(times) < 20):
+    if (len(times) < 60):
         for t in times:
             npb.plot.iiee.times = t
             npb.plot.iiee.title = np.datetime_as_string(t, timezone='UTC')[0:10]

@@ -14,6 +14,7 @@ def extent(DAT, var = 'aice_d', force_calc = False):
         f = DAT.extent_file
     except:
         f = None
+    os.remove(f) if force_calc and os.path.exists(f) else None
     if os.path.exists(f):
        print("ice_extent.nc file exist", f)
        dd = xr.open_dataset(f)
@@ -46,6 +47,7 @@ def extent(DAT, var = 'aice_d', force_calc = False):
         data = np.zeros((shape))
         data[0,:] = np.array(NH)
         data[1,:] = np.array(SH)
+        data = np.ma.masked_where(data == 0, data)
         DAT = DAT.assign(extent=(dims_save, data))
         DAT = DAT.assign(pole=('pole', ['north', 'south']))
         if f:
