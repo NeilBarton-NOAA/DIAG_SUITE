@@ -85,24 +85,34 @@ for pole in ['north', 'south']:
             npb.plot.iiee.times = t
             npb.plot.iiee.title = np.datetime_as_string(t, timezone='UTC')[0:10]
             npb.plot.iiee.create()
+    m_times = times.isel(time = times.dt.month.isin([4]))
+    if m_times.size > 5:
+        npb.plot.iiee.times = m_times 
+        npb.plot.iiee.title = 'Retro 3 and 4' 
+        npb.plot.iiee.create() 
+    m_times = times.isel(time = times.dt.month.isin([11,12]))
+    if m_times.size > 5:
+        npb.plot.iiee.times = m_times 
+        npb.plot.iiee.title = 'Retro 5,7,8' 
+        npb.plot.iiee.create() 
     # plot by month
-    months = np.unique(DAT[0]['time'].sel(time = times).dt.month)
-    for m in months:
-        m_times = times.isel(time = times.dt.month.isin([m]))
-        npb.plot.iiee.times = m_times 
-        npb.plot.iiee.title = calendar.month_abbr[m].upper() 
-        npb.plot.iiee.create() 
-    # plot winter and summer cases
-    m_times = times.isel(time = times.dt.month.isin([1,2,12]))
-    if m_times.size > 5:
-        npb.plot.iiee.times = m_times 
-        npb.plot.iiee.title = 'Winter' 
-        npb.plot.iiee.create() 
-    m_times = times.isel(time = times.dt.month.isin([6,7,8]))
-    if m_times.size > 5:
-        npb.plot.iiee.times = m_times 
-        npb.plot.iiee.title = 'Summer' 
-        npb.plot.iiee.create() 
+    #months = np.unique(DAT[0]['time'].sel(time = times).dt.month)
+    #for m in months:
+    #    m_times = times.isel(time = times.dt.month.isin([m]))
+    #    npb.plot.iiee.times = m_times 
+    #    npb.plot.iiee.title = calendar.month_abbr[m].upper() 
+    #    npb.plot.iiee.create() 
+    ## plot winter and summer cases
+    #m_times = times.isel(time = times.dt.month.isin([1,2,12]))
+    #if m_times.size > 5:
+    #    npb.plot.iiee.times = m_times 
+    #    npb.plot.iiee.title = 'Winter' 
+    #    npb.plot.iiee.create() 
+    #m_times = times.isel(time = times.dt.month.isin([6,7,8]))
+    #if m_times.size > 5:
+    #    npb.plot.iiee.times = m_times 
+    #    npb.plot.iiee.title = 'Summer' 
+    #    npb.plot.iiee.create() 
 
 if len(np.unique(times.dt.month)) == 12:
     for i, D in enumerate(DAT):

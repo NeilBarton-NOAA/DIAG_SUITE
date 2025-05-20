@@ -178,6 +178,7 @@ def iiee(DAT, OBS, CLIMO = False, var = 'aice_d'):
                 OBS_NAMES.append(ob.name + '_climatology')
     dims_iiee = ('obs_type', 'pole') + DAT[var].dims[0:-2] 
     t = DAT['time'].values[0]
+    DAT['forecast_hour'] = DAT['forecast_hour'].where(DAT['forecast_hour'] >= 0, 0)
     for i, ob in enumerate(OBS):
         ob = grid_name(ob)
         print(' Verifying Data:',ob.name, ob.grid_name)
@@ -203,7 +204,6 @@ def iiee(DAT, OBS, CLIMO = False, var = 'aice_d'):
         # model values
         DAT = DAT.sel(forecast_hour = common)
         model = DAT[v] 
-        #.sel(forecast_time = common).squeeze()
         # Set up the data set if needed
         if i == 0:
             coords = {  "obs_type"      : OBS_NAMES,
@@ -217,21 +217,25 @@ def iiee(DAT, OBS, CLIMO = False, var = 'aice_d'):
         #########################################
         # forecast versus obs
         _, data = xr.broadcast(model, data)
-        DAT['diff'] = (model_dims, model.values - data.values) 
-        DAT['iiee'][k,p,:] = (np.multiply(abs(DAT['diff']), area)).sum(dim = dim_sum).values / 1e6
-        DAT['aee'][k,p,:]  = abs(np.multiply(DAT['diff'], area).sum(dim = dim_sum).values / 1e6)
+        DAT['temp_diff'] = (model_dims, model.values - data.values) 
+        if 'NH' in ob.grid_name:
+            DAT['diff_NH'] = DAT['temp_diff']
+        elif 'SH' in ob.grid_name:
+            DAT['diff_SH'] = DAT['temp_diff'] 
+        DAT['iiee'][k,p,:] = (np.multiply(abs(DAT['temp_diff']), area)).sum(dim = dim_sum).values / 1e6
+        DAT['aee'][k,p,:]  = abs(np.multiply(DAT['temp_diff'], area).sum(dim = dim_sum).values / 1e6)
         #print('forecast vs data', DAT['iiee'][k,p,:].sel(time = t).values)
-        DAT.drop('diff')
+        DAT.drop('temp_diff')
         #########################################
         # persistence (first time of model) versus observations
         k = OBS_NAMES.index(ob.name + '_persistence')
         model = data.isel(forecast_hour = 0 ) 
         _, model = xr.broadcast(data, model)
-        DAT['diff'] = (model_dims, model.values - data.values) 
-        DAT['iiee'][k,p,:] = (np.multiply(abs(DAT['diff']), area)).sum(dim = dim_sum).values / 1e6
-        DAT['aee'][k,p,:]  = abs(np.multiply(DAT['diff'], area).sum(dim = dim_sum).values / 1e6)
+        DAT['temp_diff'] = (model_dims, model.values - data.values) 
+        DAT['iiee'][k,p,:] = (np.multiply(abs(DAT['temp_diff']), area)).sum(dim = dim_sum).values / 1e6
+        DAT['aee'][k,p,:]  = abs(np.multiply(DAT['temp_diff'], area).sum(dim = dim_sum).values / 1e6)
         #print('forecast vs persistence', DAT['iiee'][k,p,:].sel(time = t).values)
-        DAT.drop('diff')
+        DAT.drop('temp_diff')
         # climatology values versus observations
         if ADD_CLIMO:
             k = OBS_NAMES.index(ob.name + '_climatology')
@@ -245,9 +249,9 @@ def iiee(DAT, OBS, CLIMO = False, var = 'aice_d'):
             model = model.where(model < 2, 0)
             model = model.where(model < 0.15, 1, 0)
             model = model.expand_dims(time = [t])
-            DAT['diff'] = (model.dims, model.values - data.values)
-            iiee = np.array((np.multiply(abs(DAT['diff']), area)).sum(dim = dim_sum).values / 1e6)
-            aee = abs(np.multiply(DAT['diff'], area).sum(dim = dim_sum).values / 1e6)
+            DAT['temp_diff'] = (model.dims, model.values - data.values)
+            iiee = np.array((np.multiply(abs(DAT['temp_diff']), area)).sum(dim = dim_sum).values / 1e6)
+            aee = abs(np.multiply(DAT['temp_diff'], area).sum(dim = dim_sum).values / 1e6)
             if 'member' in DAT.dims:
                 for mem in DAT['member'].values:
                     DAT['iiee'][k,p,mem,:,0] = iiee
@@ -255,13 +259,12 @@ def iiee(DAT, OBS, CLIMO = False, var = 'aice_d'):
             else:
                 DAT['iiee'][k,p,:]= iiee
                 DAT['aee'][k,p,:]= iiee 
-            #print('forecast vs climatology', DAT['iiee'][k,p,:].sel(time = t).values)
         #exit(1)
     DAT['me'] = (DAT['iiee'].dims, DAT['iiee'].values - DAT['aee'].values)
     SAVE_DAT = DAT.copy()
     SAVE_DAT.drop('TLAT')
     SAVE_DAT.drop('TLON')
     for key in SAVE_DAT.keys():
-        if key not in ['member', 'forecast_time', 'time', 'pole', 'tau', 'obs_type', 'iiee', 'aee', 'me']:
+        if key not in ['member', 'forecast_time', 'time', 'pole', 'tau', 'obs_type', 'iiee', 'aee', 'me', 'diff_NH', 'diff_SH']:
             SAVE_DAT = SAVE_DAT.drop(key)
     return SAVE_DAT

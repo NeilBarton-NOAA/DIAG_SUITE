@@ -88,24 +88,34 @@ for pole in ['north', 'south']:
             npb.plot.ice_extent.times = t
             npb.plot.ice_extent.title = np.datetime_as_string(t, timezone='UTC')[0:10]
             npb.plot.ice_extent.create()
-    # plot by month
-    months = np.unique(DAT[0]['time'].sel(time = times).dt.month)
-    for m in months:
-        m_times = times.isel(time = times.dt.month.isin([m]))
-        npb.plot.ice_extent.times = m_times 
-        npb.plot.ice_extent.title = calendar.month_abbr[m].upper() 
-        npb.plot.ice_extent.create() 
-    # plot winter and summer cases
-    m_times = times.isel(time = times.dt.month.isin([1,2,12]))
+    m_times = times.isel(time = times.dt.month.isin([4]))
     if m_times.size > 5:
         npb.plot.ice_extent.times = m_times 
-        npb.plot.ice_extent.title = 'Winter' 
+        npb.plot.ice_extent.title = 'Retro 3 and 4' 
         npb.plot.ice_extent.create() 
-    m_times = times.isel(time = times.dt.month.isin([6,7,8]))
+    m_times = times.isel(time = times.dt.month.isin([11,12]))
     if m_times.size > 5:
         npb.plot.ice_extent.times = m_times 
-        npb.plot.ice_extent.title = 'Summer' 
+        npb.plot.ice_extent.title = 'Retro 5,7,8' 
         npb.plot.ice_extent.create() 
+    ## plot by month
+    #months = np.unique(DAT[0]['time'].sel(time = times).dt.month)
+    #for m in months:
+    #    m_times = times.isel(time = times.dt.month.isin([m]))
+    #    npb.plot.ice_extent.times = m_times 
+    #    npb.plot.ice_extent.title = calendar.month_abbr[m].upper() 
+    #    npb.plot.ice_extent.create() 
+    ## plot winter and summer cases
+    #m_times = times.isel(time = times.dt.month.isin([1,2,12]))
+    #if m_times.size > 5:
+    #    npb.plot.ice_extent.times = m_times 
+    #    npb.plot.ice_extent.title = 'Winter' 
+    #    npb.plot.ice_extent.create() 
+    #m_times = times.isel(time = times.dt.month.isin([6,7,8]))
+    #if m_times.size > 5:
+    #    npb.plot.ice_extent.times = m_times 
+    #    npb.plot.ice_extent.title = 'Summer' 
+    #    npb.plot.ice_extent.create() 
 
 ############
 # plot monthly per tau bias heat plots

@@ -62,7 +62,7 @@ ds['forecast_time'] = ds['forecast_hour']
 ds['forecast_time'].attrs['long_name'] = 'valid_time_of_forecast'
 ds['forecast_hour'] = (('forecast_hour',) , (ds['forecast_time'].values - np.datetime64(t)) / np.timedelta64(1,'h'))
 ds['forecast_hour'].attrs['long_name'] = 'valid_hour_of_forecast'
-#ds['forecast_hour'] = ds['tau'].where(ds['tau'] >= 0, 0)
+#ds['forecast_hour'] = ds['forecast_hour'].where(ds['forecast_hour'] >= 0, 0)
 ####################################
 # remove time from tarea variable and write
 ds['tarea'] = ds['tarea'].isel(forecast_hour = 1)

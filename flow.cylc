@@ -1,11 +1,11 @@
 #!jinja2
 ########################
 # Items that may need changed
-{% set START_DTG = '20241116T00' %}
-{% set END_DTG = '20241202T00' %}
+{% set START_DTG = '20230418T00' %}
+{% set END_DTG = '20230427T00' %}
 {% set FREQ = 'P1D' %} # one day
 {% set EXPS = 'GFSRETRO' %}
-{% set PARSE_DATA = True %}
+{% set PARSE_DATA = False %}
 {% set MAIL_ADDRESS = "neil.barton@noaa.gov" %}
 {% set MACHINE = "GAEA" %}
 {% set ICE_VARS = "aice, hi" %}
@@ -151,7 +151,7 @@ unset ESMFMKFILE
 ################################################
 # parse data
     [[PARSE_OUTPUT_CICE]]
-        platform = localhost
+        #platform = localhost
     [[parse_output<experiment><cice_vars>]]
         inherit = PARSE_OUTPUT_CICE
         script = """
@@ -186,7 +186,7 @@ unset ESMFMKFILE
 ################################################
 # diagnostics
    [[CALC_ICE_EXTENT]]
-        platform = localhost
+        #platform = localhost
    [[calc_ice_extent<experiment>]]
         inherit = CALC_ICE_EXTENT
         script = """
@@ -203,7 +203,7 @@ unset ESMFMKFILE
         ${SCRIPT_DIR}/PLOT_ice_extent.py -d ${TOPDIR_OUTPUT} -e ${EXPS} -fd ${TOPDIR_FIGURES} -od ${TOPDIR_OBS}
         """
    [[INTERP_ICE]]
-        platform = localhost
+        #platform = localhost
    [[interp_ice<experiment>]]
         inherit = INTERP_ICE
         script = """
@@ -229,6 +229,9 @@ unset ESMFMKFILE
         ${SCRIPT_DIR}/PLOT_iiee.py -d ${TOPDIR_OUTPUT} -e ${EXPS} -fd ${TOPDIR_FIGURES}
         """
    [[MAPS_ICE]]
+        [[[directives]]]
+            --time = 08:00:00
+            --mem = 0
    [[maps_ice<poles><cice_vars><experiment>]]
         inherit = MAPS_ICE
         script = """
@@ -238,6 +241,14 @@ unset ESMFMKFILE
         EXPS=${EXPS//,/}
         source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
         ${SCRIPT_DIR}/CICE_maps.py -d ${TOPDIR_OUTPUT}/${EXP} -e ${EXP} -v ${VAR} -p ${POLE} -fd ${TOPDIR_FIGURES} -od ${TOPDIR_OBS} -ae ${EXPS}
+        """
+   [[maps_ice_iiee<poles><experiment>]]
+        inherit = MAPS_ICE
+        script = """
+        EXP=${CYLC_TASK_PARAM_experiment}
+        POLE=${CYLC_TASK_PARAM_poles}
+        source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
+        ${SCRIPT_DIR}/CICE_maps_iiee.py -d ${TOPDIR_OUTPUT}/${EXP} -e ${EXP} -p ${POLE} -fd ${TOPDIR_FIGURES}
         """
         [[[directives]]]
             --time = 08:00:00

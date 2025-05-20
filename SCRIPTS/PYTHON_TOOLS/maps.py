@@ -34,7 +34,7 @@ class CICE(object):
     @classmethod
     def create(cls):
         olon, olat = cls.dat['TLON'], cls.dat['TLAT']
-        d_tau = cls.dat['forecast_hour'].values[0] if cls.tau == 0 else cls.tau
+        d_tau = cls.tau
         if cls.times.size == 1:
             dat = cls.dat[cls.var_name].sel(time = cls.times, forecast_hour = d_tau)
         else:
@@ -58,8 +58,12 @@ class CICE(object):
             vmax = 1.0
             cmap_DAT = plt.get_cmap('terrain_r')
         else:
-            vmin = dat.min().values
-            vmax = dat.max().values
+            if cls.pole == 'north':
+                vmin = dat.where(cls.dat['TLAT'] > 0).min().values
+                vmax = dat.where(cls.dat['TLAT'] > 0).max().values
+            elif cls.pole == 'south':
+                vmin = dat.where(cls.dat['TLAT'] < 0).min().values
+                vmax = dat.where(cls.dat['TLAT'] < 0).max().values
             dat = dat.where(dat > 0)
             cmap_DAT = plt.get_cmap('jet')
         im = ax.pcolormesh(olon, olat, dat, 
@@ -83,5 +87,48 @@ class CICE(object):
             + cls.title.replace(' ','').replace(':','') + '_' + cls.var_name + '.png'
         print('SAVED:', fig_name)
         plt.savefig(fig_name, bbox_inches = 'tight')
-        plt.show()
+        #plt.show()
+
+class IIEE(object):
+    save_dir = './'
+    @classmethod
+    def create(cls):
+        fig = plt.figure(figsize=(8, 6))
+        if cls.pole == 'north':
+            ax = fig.add_subplot(1,1,1, projection = ccrs.NorthPolarStereo())
+            ax = npb.base_maps.Arctic(ax, labels = False)
+            t_lon, t_lat = 180.0, 53.0
+            var = 'diff_NH'
+        elif cls.pole == 'south':
+            ax = fig.add_subplot(1,1,1, projection = ccrs.SouthPolarStereo())
+            ax = npb.base_maps.Antarctic(ax, labels = False)
+            t_lon, t_lat = 0.0, -43.
+            var = 'diff_SH'
+        if cls.times.size == 1:
+            dat = cls.dat[var].sel(time = cls.times, forecast_hour = cls.tau)
+        else:
+            dat = cls.dat[var].sel(time = cls.times, forecast_hour = cls.tau).mean(dim = 'time') 
+        dat = dat.where(dat != 0)
+        vmin, vmax = -1, 1
+        cmap_DAT = plt.get_cmap('coolwarm')
+        x, y, kw = npb.maps.getICEdomain(cls.pole)
+        im = ax.pcolormesh(x, y, dat, 
+            vmin = vmin,
+            vmax = vmax,
+            cmap = cmap_DAT,
+            transform = ccrs.Stereographic(**kw))
+        ax = npb.base_maps.add_features(ax)
+        ax.text(t_lon, t_lat, cls.title, \
+            fontsize = 'large', \
+            fontweight = 'bold', \
+            transform = ccrs.PlateCarree(), \
+            ha = 'center', va = 'center')
+        cbar_ax = fig.add_axes([0.25, 0.07, 0.52, 0.035])
+        cbar = fig.colorbar(im, cax = cbar_ax, orientation='horizontal' )
+        cbar.set_label('Model Minus Obs')
+        fig_name = cls.save_dir + '/' + cls.pole[0].upper() + 'H_map' \
+            + cls.title.replace(' ','').replace(':','') + '_' + 'IIEE_DIFF.png'
+        print('SAVED:', fig_name)
+        plt.savefig(fig_name, bbox_inches = 'tight')
+        #plt.show()
 

@@ -223,9 +223,9 @@ class iiee(object):
         plt.xlim(data['forecast_hour'].min().values/24, data['forecast_hour'].max().values/24)
         plt.ylabel('IIEE')
         plt.xlabel('Forecast Day')
-        extra = plt.legend(bbox_to_anchor=(1.0, 0.9), frameon = False)
+        plt.legend(frameon = False)
         fig_name = cls.save_dir + '/' + cls.pole[0].upper() + 'H_iiee_' + exp_title + cls.title.replace(' ','').replace(':','').replace('/','') + '.png'
-        plt.savefig(fig_name, bbox_extra_artists = (extra,), bbox_inches = 'tight')
+        plt.savefig(fig_name)
         print('SAVED:', fig_name)  
         #plt.show()
         plt.close()
