@@ -97,6 +97,9 @@ npb.maps.CICE.obs = OBS[p]
 npb.maps.CICE.var_name = var
 npb.maps.CICE.pole = pole
 npb.maps.CICE.times = times
+if var == 'hi':
+    npb.maps.CICE.vmin = 0
+    npb.maps.CICE.vmax = 5
 
 dim_search = DAT[var].dims[-2::]
 index = (DAT[var].sel(time = times).isnull().all(dim = dim_search).any(dim = 'time') == False).values

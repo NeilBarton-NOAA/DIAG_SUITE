@@ -1,8 +1,8 @@
 #!jinja2
 ########################
 # Items that may need changed
-{% set START_DTG = '20230418T00' %}
-{% set END_DTG = '20230427T00' %}
+{% set START_DTG = '20241116T00' %}
+{% set END_DTG = '20250105T00' %}
 {% set FREQ = 'P1D' %} # one day
 {% set EXPS = 'GFSRETRO' %}
 {% set PARSE_DATA = False %}
@@ -48,11 +48,11 @@
 ################################################
 # download data if needed from HPSS
     [[graph]]
-        R1 = """
-        {% if PARSE_DATA %}
-            GRAB_OBS:succeed-all => CALC_OBS_EXTENT
-        {% endif %} # if PARSE_DATA
-             """
+        #R1 = """
+        #{% if PARSE_DATA %}
+        #    GRAB_OBS:succeed-all => CALC_OBS_EXTENT
+        #{% endif %} # if PARSE_DATA
+        #     """
         
         {% if PARSE_DATA %}
         {{ FREQ }} = """
@@ -63,14 +63,13 @@
         {% endif %} # if PARSE_DATA
 
         R1/$ = """    
-            POST_PARSE               => CALC_ICE_EXTENT 
             POST_PARSE               => INTERP_ICE
+            POST_PARSE               => maps_obs_ice_thickness
 
+            INTERP_ICE:succeed-all  => CALC_IIEE & CALC_ICE_EXTENT & MAPS_ICE
+            
             CALC_ICE_EXTENT:succeed-all => plot_ice_extent
-               
-            INTERP_ICE:succeed-all  => CALC_IIEE
             CALC_IIEE:succeed-all   => plot_iiee
-            INTERP_ICE:succeed-all  => MAPS_ICE
             """
 
 ################################################
@@ -139,14 +138,14 @@ unset ESMFMKFILE
         ${SCRIPT_DIR}/GRAB_obs_from_hpss.sh ice_concentration
         """
 
-    [[CALC_OBS_EXTENT]]
-        #platform = localhost
-    [[calc_obs_extent_cdr]]
-        inherit = CALC_OBS_EXTENT
-        script = """
-        source ${SCRIPT_DIR}/experiment_options.sh DUMMY ${DTG}
-        ${SCRIPT_DIR}/OBS_calc_extent.py -od ${TOPDIR_OBS}
-        """
+#    [[CALC_OBS_EXTENT]]
+#        #platform = localhost
+#    [[calc_obs_extent_cdr]]
+#        inherit = CALC_OBS_EXTENT
+#        script = """
+#        source ${SCRIPT_DIR}/experiment_options.sh DUMMY ${DTG}
+#        ${SCRIPT_DIR}/OBS_calc_extent.py -od ${TOPDIR_OBS}
+#        """
 
 ################################################
 # parse data
@@ -160,14 +159,6 @@ unset ESMFMKFILE
         source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
         ${SCRIPT_DIR}/CICE_parse.sh ${DTG} ${VAR} ${EXP} 
         """
-    #[[ENSEMBLE_COMBINE]]
-    #[[ensemble_combine<experiment><cice_vars>]]
-    #    inherit = ENSEMBLE_COMBINE
-    #    script = """
-    #    VAR=${CYLC_TASK_PARAM_cice_vars}
-    #    EXP=${CYLC_TASK_PARAM_experiment}
-    #    ${SCRIPT_DIR}/ENS_combine_files.sh ${DTG} ${VAR} ${EXP} 
-    #    """
    [[CLEAN]]
         platform = localhost
    [[clean_CICE<experiment>]]
@@ -184,7 +175,21 @@ unset ESMFMKFILE
         """
 
 ################################################
-# diagnostics
+# Intepolate OBS and Model on Same Grid
+   [[INTERP_ICE]]
+        #platform = localhost
+   [[interp_ice<experiment>]]
+        inherit = INTERP_ICE
+        script = """
+        EXP=${CYLC_TASK_PARAM_experiment}
+        source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
+        ${SCRIPT_DIR}/INTERP_iiee.py -d ${TOPDIR_OUTPUT}/${EXP} -od ${TOPDIR_OBS} -obs ${OBS}
+        """
+        [[[directives]]]
+            --time = 08:00:00
+
+####################################
+# Calculate Ice Metrics   
    [[CALC_ICE_EXTENT]]
         #platform = localhost
    [[calc_ice_extent<experiment>]]
@@ -197,41 +202,38 @@ unset ESMFMKFILE
         [[[directives]]]
             --time = 04:00:00
             #--qos = debug
-   [[plot_ice_extent]]
-        script = """
-        source ${SCRIPT_DIR}/experiment_options.sh DUMMY ${DTG}
-        ${SCRIPT_DIR}/PLOT_ice_extent.py -d ${TOPDIR_OUTPUT} -e ${EXPS} -fd ${TOPDIR_FIGURES} -od ${TOPDIR_OBS}
-        """
-   [[INTERP_ICE]]
-        #platform = localhost
-   [[interp_ice<experiment>]]
-        inherit = INTERP_ICE
-        script = """
-        EXP=${CYLC_TASK_PARAM_experiment}
-        source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
-        ${SCRIPT_DIR}/INTERP_iiee.py -d ${TOPDIR_OUTPUT}/${EXP} -od ${TOPDIR_OBS}
-        """
-        [[[directives]]]
-            --time = 08:00:00
    [[CALC_IIEE]]
    [[calc_iiee<experiment>]]
         inherit = CALC_IIEE
         script = """
         EXP=${CYLC_TASK_PARAM_experiment}
         source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
-        ${SCRIPT_DIR}/CALC_iiee.py -d ${TOPDIR_OUTPUT}/${EXP} -od ${TOPDIR_OBS}
+        ${SCRIPT_DIR}/CALC_iiee.py -d ${TOPDIR_OUTPUT}/${EXP} -od ${TOPDIR_OBS} -obs ${OBS}
         """
         [[[directives]]]
             --time = 08:00:00
+
+####################################
+# Line Plots 
+   [[plot_ice_extent]]
+        script = """
+        source ${SCRIPT_DIR}/experiment_options.sh DUMMY ${DTG}
+        ${SCRIPT_DIR}/PLOT_ice_extent.py -d ${TOPDIR_OUTPUT} -e ${EXPS} -fd ${TOPDIR_FIGURES} -od ${TOPDIR_OBS}
+        """
+   
    [[plot_iiee]]
         script = """
         source ${SCRIPT_DIR}/experiment_options.sh DUMMY ${DTG}
         ${SCRIPT_DIR}/PLOT_iiee.py -d ${TOPDIR_OUTPUT} -e ${EXPS} -fd ${TOPDIR_FIGURES}
         """
+
+####################################
+# Maps
    [[MAPS_ICE]]
         [[[directives]]]
             --time = 08:00:00
             --mem = 0
+   
    [[maps_ice<poles><cice_vars><experiment>]]
         inherit = MAPS_ICE
         script = """
@@ -250,7 +252,9 @@ unset ESMFMKFILE
         source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
         ${SCRIPT_DIR}/CICE_maps_iiee.py -d ${TOPDIR_OUTPUT}/${EXP} -e ${EXP} -p ${POLE} -fd ${TOPDIR_FIGURES}
         """
-        [[[directives]]]
-            --time = 08:00:00
-            --mem = 0
-   
+   [[maps_obs_ice_thickness]]
+        inherit = MAPS_ICE
+        script = """
+        source ${SCRIPT_DIR}/experiment_options.sh DUMMY ${DTG}
+        ${SCRIPT_DIR}/OBS_ice_thickness.py -od ${TOPDIR_OBS} -fd ${TOPDIR_FIGURES}
+        """ 

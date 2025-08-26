@@ -27,16 +27,19 @@ case ${EXP} in
         SRC_DIR='/NCEPDEV/emc-ensemble/2year/Bing.Fu/ep5r2_f' 
         WORKFLOW="GEFS"
         RUN="gefs"
+        OBS="noaa_cdr"
         ;;
     'EP6')    
         SRC_DIR='/NCEPDEV/emc-ensemble/5year/emc.ens/WCOSS2/EP6'
         WORKFLOW="GW"
         RUN="gefs"
+        OBS="noaa_cdr"
         ;;
     'GFSRETRO')    
-        SRC_DIR='/5year/NCEPDEV/emc-global/emc.glopara/WCOSS2/GFSv17/retro*'
+        SRC_DIR='/5year/NCEPDEV/emc-global/emc.glopara/WCOSS2/GFSv17/retrotestgfs1*'
         WORKFLOW="GFS"
         RUN="gfs"
+        OBS="osi_saf analysis"
         ;;
      'DUMMY')
         echo "DUMMY EXP for scripts"

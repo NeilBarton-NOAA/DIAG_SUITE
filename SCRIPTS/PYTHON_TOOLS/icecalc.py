@@ -8,60 +8,43 @@ import sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../PYTHON_TOOLS')
 import PYTHON_TOOLS as npb
 
-def extent(DAT, var = 'aice_d', force_calc = False):
-    # grab data if already calculated
-    try:
-        f = DAT.extent_file
-    except:
-        f = None
-    os.remove(f) if force_calc and os.path.exists(f) else None
-    if os.path.exists(f):
-       print("ice_extent.nc file exist", f)
-       dd = xr.open_dataset(f)
-       DAT['extent'] = (dd['extent'].dims, dd['extent'].values)
-    # assume data are from CICE model
-    dims = ('nj', 'ni')
-    DIV = 1e12
-    # see if data are already there
-    if 'extent' not in list(DAT.keys()) or force_calc:
-        print('CALCULATING ICE EXTENT:')
-        NH, SH = [], []
-        ds = DAT.isel(time = 0)
-        print('     looping through time')
-        if 'member' in DAT.dims:
-            dims_save = ['pole', 'time', 'member', 'forecast_hour']
-        else:
-            dims_save = ['pole', 'time', 'forecast_hour']
-        for t in DAT['time']:
-            print('     ', t.values)
-            # NH
-            ds = DAT.sel(time = t.values)
-            ds = ds.where(ds.TLAT > 10)
-            dum = DAT['tarea'].where(ds[var] >= 0.15).sum(dim = dims) / DIV
-            NH.append(DAT['tarea'].where(ds[var] >= 0.15).sum(dim = dims).values / DIV)
-            # SH
-            ds = DAT.sel(time = t.values)
-            ds = ds.where(ds.TLAT < -20)
-            SH.append(ds['tarea'].where(ds[var] >= 0.15).sum(dim = dims).values / DIV)
-        shape = (2,) + np.array(NH).shape 
-        data = np.zeros((shape))
-        data[0,:] = np.array(NH)
-        data[1,:] = np.array(SH)
-        data = np.ma.masked_where(data == 0, data)
-        DAT = DAT.assign(extent=(dims_save, data))
-        DAT = DAT.assign(pole=('pole', ['north', 'south']))
-        if f:
-            SAVE_DAT = DAT.copy()
-            for key in SAVE_DAT.keys():
-                if key not in ['extent', 'time', 'time_start', 'forecast_time', 'pole', 'member', 'forecast_hour']:
-                    SAVE_DAT = SAVE_DAT.drop(key)
-            print('writing:', f)
-            if os.path.exists(f):
-                SAVE_DAT.to_netcdf(f, mode = 'a')
+def to_netcdf(ds, filename):
+    default_compression = {"zlib": True, "complevel": 6}
+    compress_encoding = {var_name: default_compression for var_name in ds.data_vars}
+    ds.to_netcdf(filename, encoding=compress_encoding)
+    print('SAVED:', filename)
+
+class extent(object):
+    @classmethod
+    def calc(cls):
+        dat = cls.ds[cls.var]
+        dims = cls.ds[cls.var].dims[-2::]
+        if 'nj' in cls.ds[cls.var].dims:
+            DIV = 1e12
+            area = cls.ds['tarea']
+            dat = cls.ds[cls.var]
+            pole_data = []
+            for p in ['NH', 'SH']:
+                if p == 'NH':
+                    EXT = area.where((dat.TLAT > 10) & (dat >= 0.15)).sum(dim = dims) / DIV    
+                elif p == 'SH':
+                    EXT = area.where((dat.TLAT < -10) & (dat >= 0.15)).sum(dim = dims) / DIV
+                EXT = EXT.expand_dims({"hemisphere" : [p]})
+                EXT.name = 'extent'
+                pole_data.append(EXT)
+            ds = xr.concat(pole_data, dim = 'hemisphere')
+        else: 
+            if cls.var == 'ice_con':
+                grid_size = float(cls.ds.grid[0:2])**2.0
             else:
-                SAVE_DAT.to_netcdf(f)
-    return DAT
-    
+                grid_size = float(cls.ds[cls.var].dims[-1][-2::])**2.0
+            area = xr.ones_like(cls.ds[cls.var]) * grid_size
+            dat = cls.ds[cls.var]
+            DIV = 1e6
+            ds = area.where(dat >= 0.15).sum(dim = dims) / DIV
+            ds.name = 'extent'
+        return ds
+
 def daily_taus(DAT, var):
     if ('_h' in var):
         print('MODEL output in hours and OBS in days: will only examine days')
@@ -75,91 +58,72 @@ def daily_taus(DAT, var):
         DAT = DAT.drop('tau')
         DAT = DAT.rename({'new_tau': 'tau', 'new_' + var: var})
     return DAT
-
-def CALC_IIEE(MODEL, OBS, AREA):
-    MODEL[MODEL > 0.15] = 1
-    MODEL[MODEL <= 0.15] = 0
-    OBS[OBS > 1] = 0 # land mask
-    OBS[OBS > 0.15] = 1
-    OBS[OBS <= 0.15] = 0
-    IIEE = np.nansum(np.multiply(MODEL - OBS), AREA) / 1000000
-    AEE = np.abs(np.nansum(np.multiply((MODEL - OBS), AREA))) / 1000000
-    ME = IIEE - AEE
-    return IIEE, AEE, ME
-            
-def grid_name(ob):
-    ############
-    # determine grid name
-    if 'grid_name' not in ob.attrs:
-        if 'spatial_resolution' in ob.attrs: 
-            grid_area = int(ob.spatial_resolution.strip('km'))
-        elif 'geospatial_x_resolution' in ob.attrs:
-            grid_area = int(ob.geospatial_x_resolution.split()[0][0:2])
-        else:
-            print('grid resolution unknown')
-            for k in ob.attrs.keys():
-                print(' ',k,'   ', ob.attrs[k])
-                exit(1)
-        grid_name = ob.pole + str(grid_area)
-        ob = ob.assign_attrs({'grid_name' : grid_name})
-    return ob
-
-def interp(DAT, OBS, var = 'aice_d', force_calc = False):
-    file_save = os.path.dirname(DAT.file_name) + '/interp_obs_grids_' + os.path.basename(DAT.file_name) 
+ 
+def interp(ds_model, ds_obss, var = 'aice_d', force_calc = True):
+    file_save = os.path.dirname(ds_model.file_name) + '/INTERP_' + os.path.basename(ds_model.file_name) 
     if (os.path.exists(file_save) == False) or (force_calc == True):
-        DAT.rename({'TLAT': 'lat', 'TLON': 'lon'})
-        DAT['lat'] = (DAT['TLAT'].dims, DAT['TLAT'].values)
-        DAT['lon'] = (DAT['TLON'].dims, DAT['TLON'].values)
-        DAT = daily_taus(DAT, var)
-        if 'tarea' in DAT.variables:
-            DAT = DAT.drop('tarea')
+        ds_model.rename({'TLAT': 'lat', 'TLON': 'lon'})
+        ds_model['lat'] = (ds_model['TLAT'].dims, ds_model['TLAT'].values)
+        ds_model['lon'] = (ds_model['TLON'].dims, ds_model['TLON'].values)
+        ds_model['mask'] = (ds_model['tmask'].dims, ds_model['tmask'].values)
+        ds_model[var] = ds_model[var].where(ds_model['mask'] == 1, drop = False)
+        ds_model = daily_taus(ds_model, var)
         ################################################
         # create regridder/interpolate data/ make new data array
-        dir_weights = os.path.dirname(DAT.file_name) + '/interp_weights'
+        dir_weights = os.path.dirname(ds_model.file_name) + '/interp_weights'
         if not os.path.exists(dir_weights):
             os.makedirs(dir_weights)
-        TMP_NAMES, TMP_DS = [], []
-        for ob in OBS:
-            ############
-            # determine grid name
-            ob = grid_name(ob)
-            ############
-            # interpolate if needed
-            if (var + ob.grid_name) not in TMP_NAMES:
-                print('interpolating to', ob.grid_name)
-                D = DAT.copy()
-                file_weights = dir_weights + '/regridding_weights_CICE025_to_' + ob.grid_name + 'km.nc'
-                print(file_weights)
+        INTERP_DSS, INTERP_NAMES = [], []
+        for ds_obs in ds_obss:
+            if var + ds_obs.grid not in INTERP_NAMES:
+                ############
+                # determine grid name
+                file_weights = dir_weights + '/regridding_weights_CICE025_to_' + ds_obs.grid + 'km.nc'
+                ############
+                # interpolate if needed
+                print('interpolating to', ds_obs.grid)
+                ds_obs['mask'] = (ds_obs['land_mask'].dims, ds_obs['land_mask'].values)
                 if os.path.exists(file_weights):
-                    regridder = xe.Regridder(D, ob, 'nearest_s2d', reuse_weights=True, filename=file_weights)
+                    regridder = xe.Regridder(ds_model, ds_obs, method = 'nearest_s2d', reuse_weights=True, filename=file_weights)
                 else:
-                    regridder = xe.Regridder(D, ob, 'nearest_s2d', reuse_weights=False, filename=file_weights)
-            TMP = regridder(D)
-            TMP = TMP.rename_dims({'y': 'y' + ob.grid_name, 'x': 'x' + ob.grid_name})
-            TMP = TMP.rename({'lat': 'lat' + ob.grid_name, 'lon': 'lon' + ob.grid_name})
-            TMP_NAMES.append(var + ob.grid_name)
-            TMP_DS.append(TMP)
-            del TMP
-        for i, T in enumerate(TMP_NAMES):
+                    regridder = xe.Regridder(ds_model, ds_obs, method = 'nearest_s2d', reuse_weights=False, filename=file_weights)
+                TMP = regridder(ds_model)
+                #import matplotlib.pyplot as plt
+                #plt.figure(1)
+                #plt.imshow(ds_model['aice'][0,0], origin = 'lower'); plt.colorbar()
+                #plt.figure(2)
+                #plt.imshow(TMP['aice'][0,0]); plt.colorbar(); plt.show()
+                #print(TMP)
+                #exit(1)
+                TMP = TMP.where(ds_obs['mask'].astype(bool))
+                if ds_obs.grid[2:4] == '25':
+                    TMP = TMP.rename_dims({'y': 'y' + ds_obs.grid, 'x': 'x' + ds_obs.grid})
+                else:
+                    TMP = TMP.rename_dims({'yc': 'y' + ds_obs.grid, 'xc': 'x' + ds_obs.grid})
+                TMP = TMP.rename({'lat': 'lat' + ds_obs.grid, 'lon': 'lon' + ds_obs.grid})
+                INTERP_NAMES.append(var + ds_obs.grid)
+                INTERP_DSS.append(TMP)
+                del TMP
+        for i, T in enumerate(INTERP_NAMES):
             print('Adding to Dataset', T)
-            data = TMP_DS[i][var].values
-            dims = TMP_DS[i][var].dims
-            DAT[T] = (dims, data)
+            data = INTERP_DSS[i][var].values
+            dims = INTERP_DSS[i][var].dims
+            ds_model[T] = (dims, data)
             data_bin = np.copy(data); del data
             data_bin[data_bin > 0.15] = 1
             data_bin[data_bin <= 0.15] = 0
             data_bin[np.isnan(data_bin)] = 0
-            DAT[T + '_binary'] = (dims, data_bin.astype("int32"))
+            ds_model[T + '_binary'] = (dims, data_bin.astype("int32"))
             del data_bin
-        data = DAT[var].values
-        dims = DAT[var].dims
+        data = ds_model[var].values
+        dims = ds_model[var].dims
         data_bin = np.copy(data); del data
         data_bin[data_bin > 0.15] = 1
         data_bin[data_bin <= 0.15] = 0
         data_bin[np.isnan(data_bin)] = 0
-        DAT[var + '_binary'] = (dims, data_bin.astype("int32"))
-        encoding = { var: {"zlib": True, "complevel": 4} for var in DAT.data_vars }
-        DAT.to_netcdf(file_save, format="NETCDF4", encoding=encoding)
+        ds_model[var + '_binary'] = (dims, data_bin.astype("int32"))
+        encoding = { var: {"zlib": True, "complevel": 6} for var in ds_model.data_vars }
+        ds_model.to_netcdf(file_save, format="NETCDF4", encoding=encoding)
         print('WROTE:', file_save)
 
 def iiee(DAT, OBS, CLIMO = False, var = 'aice_d'):
@@ -218,9 +182,9 @@ def iiee(DAT, OBS, CLIMO = False, var = 'aice_d'):
         # forecast versus obs
         _, data = xr.broadcast(model, data)
         DAT['temp_diff'] = (model_dims, model.values - data.values) 
-        if 'NH' in ob.grid_name:
+        if 'NH' in ob.grid:
             DAT['diff_NH'] = DAT['temp_diff']
-        elif 'SH' in ob.grid_name:
+        elif 'SH' in ob.grid:
             DAT['diff_SH'] = DAT['temp_diff'] 
         DAT['iiee'][k,p,:] = (np.multiply(abs(DAT['temp_diff']), area)).sum(dim = dim_sum).values / 1e6
         DAT['aee'][k,p,:]  = abs(np.multiply(DAT['temp_diff'], area).sum(dim = dim_sum).values / 1e6)
@@ -243,7 +207,7 @@ def iiee(DAT, OBS, CLIMO = False, var = 'aice_d'):
             clim = CLIMO[p]
             doy = pd.to_datetime(ob['forecast_hour'].sel(forecast_hour = common).values).day_of_year
             clim = clim.sel(dayofyear = doy.values)
-            clim = clim.rename_dims({'y': 'y' + ob.grid_name, 'x': 'x' + ob.grid_name, 'dayofyear' : 'forecast_hour'})
+            clim = clim.rename_dims({'y': 'y' + ob.grid, 'x': 'x' + ob.grid, 'dayofyear' : 'forecast_hour'})
             model = clim['ice_con'] #.sel(dayofyear = doy.values)
             model = model.drop_vars('dayofyear')
             model = model.where(model < 2, 0)

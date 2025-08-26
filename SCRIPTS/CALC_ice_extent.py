@@ -12,9 +12,13 @@ if 'hfe' in platform.uname()[1]:
     exit(1)
 ########################
 import argparse
+import fnmatch
 import glob
 import os
 import sys
+import re
+import pandas as pd
+import numpy as np
 import xarray as xr
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) )
 import PYTHON_TOOLS as npb
@@ -22,14 +26,111 @@ import PYTHON_TOOLS as npb
 parser = argparse.ArgumentParser( description = "Compares Sea Ice Extent Between Runs and Observations")
 parser.add_argument('-d', '--dirs', action = 'store', nargs = 1, \
         help="top directory to find model output files")
+parser.add_argument('-od', '--obsdir', action = 'store', nargs = 1, \
+        help="top directory for observations")
+parser.add_argument('-obs', '--obs', action = 'store', nargs = '+', \
+        help="observations to use")
 args = parser.parse_args()
 tdir = args.dirs[0]
+obs_dir = args.obsdir[0]
+obs = args.obs
 var = 'aice'
 
-file_search = tdir + '/' + var + '_*.nc'
+####################################
+####################################
+# model data
+file_search = tdir + '/INTERP*' + var + '_*.nc'
+extent_file = tdir + '/ice_extent.nc'
 print(file_search)
-D = xr.open_mfdataset(file_search, coords='minimal')
-D['tarea'] = D['tarea'].isel(time=0)
-D = D.assign_attrs({'data_dir' : tdir})
-D = D.assign_attrs({'extent_file' : tdir + '/ice_extent.nc'})
-D = npb.icecalc.extent(D, var = var, force_calc = True)
+files = glob.glob(file_search)
+files.sort()
+poles = ['NH', 'SH']
+Force_Calc = True
+if not os.path.exists(extent_file) or Force_Calc == True:
+    time_data = []
+    for i, f in enumerate(files):
+        print(f)
+        ds = xr.open_dataset(f)
+        npb.icecalc.extent.ds = ds
+        if i == 0:
+            variables = fnmatch.filter(ds.variables, "aice*binary")
+            variables = [var for var in variables if 'SH' not in var]
+        var_data = []
+        for j, v in enumerate(variables):
+            print(' ',v)
+            npb.icecalc.extent.var = v
+            if v == 'aice_binary':
+                dat = npb.icecalc.extent.calc()
+                grid = 'tripole'
+            else:
+                pole_data = []
+                for p in poles:
+                    if p == 'SH':
+                        v = v.replace('NH', 'SH')
+                        print(' ',v)
+                        npb.icecalc.extent.var = v
+                        grid = v.split('SH')[1]
+                        grid = grid.split('_')[0] + 'km'
+                    EXT = npb.icecalc.extent.calc()
+                    pole_data.append(EXT.expand_dims({"hemisphere" : [p]}))
+                dat = xr.concat(pole_data, dim = 'hemisphere')
+            var_data.append(dat.expand_dims({"grid" : [grid]}))
+        time_data.append(xr.concat(var_data, dim = 'grid'))
+    dat = xr.concat(time_data, dim = 'time')
+    dat.to_netcdf(extent_file)
+    print("WROTE:", extent_file)
+    model_dat = dat
+else:
+    model_dat = xr.open_dataset(extent_file)
+####################################
+####################################
+# Calc Extent for Climatology
+file = obs_dir + '/ice_extent/climatology_ice_extent.nc'
+if not os.path.exists(file):
+    ob = 'climatology'
+    print('CALC sea ice extent from', ob)
+    npb.iceobs.sic.top_dir = obs_dir
+    npb.iceobs.sic.ob_name = ob
+    npb.icecalc.extent.var = 'ice_con'
+    pole_data = []
+    for p in poles:
+        npb.iceobs.sic.pole = p
+        dat = npb.iceobs.sic.grab()
+        npb.icecalc.extent.ds = dat
+        data = npb.icecalc.extent.calc()
+        pole_data.append(data.expand_dims({"hemisphere" : [p]}))
+    EXT = xr.concat(pole_data, dim = 'hemispheres')
+    EXT.to_netcdf(file)
+    print("WROTE:", file)
+
+####################################
+####################################
+# obs data
+start_date = model_dat['time'][0].values
+end_date = model_dat['time'][-1].values + pd.Timedelta(hours = int(model_dat['forecast_hour'][-1].values))
+time_coords = pd.date_range(start=start_date, end=end_date, freq='D')
+obs.remove('analysis')
+npb.iceobs.sic.top_dir = obs_dir
+npb.icecalc.extent.var = 'ice_con'
+for ob in obs:
+    file = tdir + '/' + ob + '_ice_extent.nc'
+    if not os.path.exists(file):
+        print('CALC sea ice extent from', ob)
+        npb.iceobs.sic.ob_name = ob
+        time_data = []
+        for i, t in enumerate(time_coords):
+            npb.iceobs.sic.dtg = t.strftime('%Y%m%d')
+            pole_data = []
+            for p in poles:
+                npb.iceobs.sic.pole = p
+                dat = npb.iceobs.sic.grab()
+                npb.icecalc.extent.ds = dat
+                EXT = npb.icecalc.extent.calc()
+                pole_data.append(EXT.expand_dims({"hemisphere" : [p]}))
+            del EXT
+            time_data.append(xr.concat(pole_data, dim = 'hemisphere'))
+        EXT = xr.concat(time_data, dim = 'time')
+        EXT = EXT.assign_attrs({'grid': dat.grid})
+        EXT.to_netcdf(file)
+        print("WROTE:", file)
+

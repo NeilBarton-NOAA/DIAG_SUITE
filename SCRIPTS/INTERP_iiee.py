@@ -24,22 +24,43 @@ parser.add_argument('-d', '--dirs', action = 'store', nargs = 1, \
         help="top directory to find model output files")
 parser.add_argument('-od', '--obsdir', action = 'store', nargs = 1, \
         help="top directory for observations")
+parser.add_argument('-obs', '--obs', action = 'store', nargs = '+', \
+        help="observations to use")
 args = parser.parse_args()
 tdir = args.dirs[0]
 var = 'aice'
 obs_dir = args.obsdir[0]
-
+obs = args.obs
 ########################
 # get observations
-OBS = []
-OBS.extend(npb.iceobs.get_icecon_nt(obs_dir))
-
+#OBS_INTERP = []
+#for ob in obs:
+#    print(ob)
+#    if ob != 'analysis':
+#        OBS_INTERP.extend(npb.iceobs.get_icecon(ob, obs_dir))
+#print('after obs')
 ########################
 # get model results
 files = glob.glob(tdir + '/' + var + '*.nc')
 files.sort()
+npb.iceobs.sic.top_dir = obs_dir
+
+# obs
+ds_model = xr.open_dataset(files[0])
+dtg = ds_model.time.dt.strftime('%Y%m%d').values[0]
+npb.iceobs.sic.dtg = dtg
+obs.append('climatology')
+ds_obs = []
+for ob in obs:
+    if ob != 'analysis':
+        print(ob)
+        npb.iceobs.sic.ob_name = ob
+        for p in ['NH', 'SH']:
+            npb.iceobs.sic.pole = p
+            ds_obs.append(npb.iceobs.sic.grab())
+
 for f in files:
     print(f)
-    DAT = xr.open_dataset(f)
-    DAT = DAT.assign_attrs({'file_name' : f }) 
-    npb.icecalc.interp(DAT, OBS, var = var, force_calc = False)
+    ds_model = xr.open_dataset(f)
+    ds_model = ds_model.assign_attrs({'file_name' : f }) 
+    npb.icecalc.interp(ds_model, ds_obs, var = var)

@@ -33,18 +33,18 @@ args = parser.parse_args()
 var = args.var[0]
 exp = args.exp[0]
 tdir = args.dirs[0]
-
+vars_keep = ['tarea', 'tmask']
 ########################
 # open files, ensemble support is needed
 # ic file
 f = glob.glob(tdir + '/*ic.nc')[0]
 ic_ds = xr.open_dataset(f)
-ic_ds = ic_ds.drop_vars([v for v in ic_ds.data_vars if v not in [var, 'tarea']])
+ic_ds = ic_ds.drop_vars([v for v in ic_ds.data_vars if v not in [var] + vars_keep])
 # forecast files
 files = sorted(glob.glob(tdir + '/*.nc'))
 files = [f for f in files if "ic.nc" not in f]
 ds = xr.open_mfdataset(files, coords='minimal', compat='override', parallel=True)
-ds = ds.drop_vars([v for v in ds.data_vars if v not in [var, 'tarea']])
+ds = ds.drop_vars([v for v in ds.data_vars if v not in [var] + vars_keep])
 # concat data sets
 ds = xr.concat([ic_ds,ds], dim='time')
 
@@ -65,8 +65,9 @@ ds['forecast_hour'].attrs['long_name'] = 'valid_hour_of_forecast'
 #ds['forecast_hour'] = ds['forecast_hour'].where(ds['forecast_hour'] >= 0, 0)
 ####################################
 # remove time from tarea variable and write
-ds['tarea'] = ds['tarea'].isel(forecast_hour = 1)
-ds['tarea'] = ds['tarea'].squeeze()
+for v in vars_keep:
+    ds[v] = ds[v].isel(forecast_hour = 1)
+    ds[v] = ds[v].squeeze()
 v = var.split('_')[0]
 ds = ds.rename({var : v })
 f_write = tdir.split(exp)[0] + exp + '/' + v + '_' + ds['time'].dt.strftime('%Y%m%d%H').values[0] + '.nc'

@@ -16,6 +16,7 @@ import calendar
 import numpy as np
 import os
 import sys
+import pandas as pd
 import xarray as xr
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) )
 import PYTHON_TOOLS as npb
@@ -25,59 +26,69 @@ parser.add_argument('-d', '--dirs', action = 'store', nargs = 1, \
         help="top directory to find model output files")
 parser.add_argument('-e', '--exps', action = 'store', nargs = '+', \
         help="experiments to calc ice extent. Also name of directory under -d")
+parser.add_argument('-obs', '--obs', action = 'store', nargs = '+', \
+        help="observations to use")
 parser.add_argument('-fd', '--figuredir', action = 'store', nargs = 1, \
         help="directory of figures")
-parser.add_argument('-od', '--obsdir', action = 'store', nargs = 1, \
-        help="top directory for observations")
 args = parser.parse_args()
 tdir = args.dirs[0]
 exps = args.exps
 save_dir = args.figuredir[0]
-obs_dir = args.obsdir[0]
+obs = args.obs
 var = 'aice'
 os.makedirs(save_dir, exist_ok=True)
 ####################################
 # grab ice extent from models
-DAT = []
+DATS = []
 for exp in exps:
     exp = exp.replace(',','').strip()
-    print(exp)
+    print('Experiment', exp)
     D = xr.open_dataset( tdir + '/' + exp + '/ice_extent.nc')
-    if 'hemisphere' in D.dims:
-        D = D.rename({'hemisphere': 'pole'})
-    D = D.assign_attrs({'test_name' : exp})
-    DAT.append(D)
-
-####################################
-# Get Same Times of Data Sets
-if len(DAT) > 1:
-    for i, ds in enumerate(DAT):
-        c_time = ds['time']
-        if i == 0: 
-            a_time = c_time
-        else: 
-            times = np.array(list(set(c_time.values) & set(a_time.values)))
-    times = DAT[0]['time'].sel(time = times)
-else:
-    times = DAT[0]['time']
+    DATS.append(D.expand_dims({"name" : [exp]}))
+MODEL = xr.concat(DATS, dim = 'name')
+if 'hemisphere' in MODEL.dims:
+    MODEL = MODEL.rename({'hemisphere': 'pole'})
 
 ####################################
 # grab ice extent observations
-OBS = []
-#OBS.append(npb.iceobs.get_extentobs_NASA(obs_dir))
-#OBS.append(npb.iceobs.get_extentobs_bootstrap(obs_dir))
-OBS.append(npb.iceobs.get_extentobs_CDR(obs_dir, 'cdr_seaice_conc'))
-OBS.append(npb.iceobs.get_extentobs_CDR(obs_dir, 'nsidc_nt_seaice_conc'))
-OBS.append(npb.iceobs.get_extentobs_CDR(obs_dir, 'nsidc_bt_seaice_conc'))
-#OBS.append(npb.iceobs.get_extentobs_noaa_g02135(obs_dir))
+DATS = []
+for ob in obs:
+    print(  'obs', ob)
+    if ob == 'analysis':
+        D = MODEL.isel(forecast_hour = 0)
+        D = D.drop_vars('forecast_hour')
+        D = D.sel(grid = 'tripole')
+        D = D.squeeze()
+    else:
+        D = xr.open_dataset( tdir + '/' + exp + '/' + ob + '_ice_extent.nc')
+        if 'hemisphere' in D.dims:
+            D = D.rename({'hemisphere': 'pole'})
+    D = D.expand_dims({"name" : [ob]})
+    DATS.append(D)
+OBS = xr.concat(DATS, dim = 'name')
 
 ####################################
-# plot month and sea ice extent 
+# if analysis, need to reduce time
+if 'analysis' in OBS.name:
+    end_date = MODEL['time'][-1].values + pd.Timedelta(hours = int(MODEL['forecast_hour'][-1].values))
+    MODEL = MODEL.sel(time=slice(None, end_date))
+
+####################################
+# Give OBS forecast hours dimension
+OBS = npb.iceobs.add_forecast_hour(OBS, MODEL['forecast_hour'][-1].values)
+
+####################################
+# grab only model output for same grid as obs
+MODEL = MODEL.sel(grid = 'tripole')
+
+####################################
+# plot month and sea ice exten
+times = MODEL['time']
 npb.plot.ice_extent.save_dir = save_dir
-npb.plot.ice_extent.dats = DAT
-npb.plot.ice_extent.obss = OBS
-for pole in ['north', 'south']:
-    m_times = times.isel(time = times.dt.month.isin([1,2,12]))
+npb.plot.ice_extent.MODEL = MODEL
+npb.plot.ice_extent.OBS = OBS
+for pole in ['NH', 'SH']:
+    #times = times.isel(time = times.dt.month.isin([1,2,12]))
     npb.plot.ice_extent.pole = pole
     npb.plot.ice_extent.times = times 
     npb.plot.ice_extent.title = 'All Times'
@@ -88,24 +99,14 @@ for pole in ['north', 'south']:
             npb.plot.ice_extent.times = t
             npb.plot.ice_extent.title = np.datetime_as_string(t, timezone='UTC')[0:10]
             npb.plot.ice_extent.create()
-    m_times = times.isel(time = times.dt.month.isin([4]))
-    if m_times.size > 5:
+    # plot by month
+    months = np.unique(MODEL['time'].sel(time = times).dt.month)
+    for m in months:
+        m_times = times.isel(time = times.dt.month.isin([m]))
         npb.plot.ice_extent.times = m_times 
-        npb.plot.ice_extent.title = 'Retro 3 and 4' 
+        npb.plot.ice_extent.title = calendar.month_abbr[m].upper() 
         npb.plot.ice_extent.create() 
-    m_times = times.isel(time = times.dt.month.isin([11,12]))
-    if m_times.size > 5:
-        npb.plot.ice_extent.times = m_times 
-        npb.plot.ice_extent.title = 'Retro 5,7,8' 
-        npb.plot.ice_extent.create() 
-    ## plot by month
-    #months = np.unique(DAT[0]['time'].sel(time = times).dt.month)
-    #for m in months:
-    #    m_times = times.isel(time = times.dt.month.isin([m]))
-    #    npb.plot.ice_extent.times = m_times 
-    #    npb.plot.ice_extent.title = calendar.month_abbr[m].upper() 
-    #    npb.plot.ice_extent.create() 
-    ## plot winter and summer cases
+    # plot winter and summer cases
     #m_times = times.isel(time = times.dt.month.isin([1,2,12]))
     #if m_times.size > 5:
     #    npb.plot.ice_extent.times = m_times 
@@ -120,7 +121,7 @@ for pole in ['north', 'south']:
 ############
 # plot monthly per tau bias heat plots
 if len(np.unique(times.dt.month)) == 12:
-    for i, d in enumerate(DAT):
+    for i, d in enumerate(MODEL):
         d.attrs['save_dir'] = save_dir
         for obs in OBS:
             d.attrs['DMIN'], d.attrs['DMAX'] = -2.0, 2.0
