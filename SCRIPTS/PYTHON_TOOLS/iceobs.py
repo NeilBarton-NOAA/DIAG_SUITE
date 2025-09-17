@@ -45,17 +45,22 @@ class sic(object):
     @classmethod
     def grab(cls):
         if cls.ob_name == None:
-            print('FATAL: cls.ob_name most be defined')
+            print('FATAL: iceobs.sic.grab(), cls.ob_name most be defined')
             exit(1)
         elif cls.ob_name == 'osi_saf':
-            file_search = cls.top_dir + '/ice_concentration/osi_saf/' + '*' + cls.pole.lower() + '*' + cls.dtg + '*.nc'
-            f = glob.glob(file_search)
+            obs_dir = cls.top_dir + '/ice_concentration/osi_saf/'
+            if isinstance(cls.dtg, str):
+                file_search = obs_dir + '*' + cls.pole.lower() + '*' + cls.dtg + '*.nc'
+                f = glob.glob(file_search)
+            else:
+                f = []
+                for d in cls.dtg: 
+                    fs = glob.glob(obs_dir + '*' + cls.pole.lower() + '*' + d + '*.nc')
+                    f.append(fs[0])
             if len(f) == 0:
-                print('FATAL: No files found:', file_search)
+                print('FATAL: iceobs.sic.grab(), No files found:', file_search)
                 exit(1)
-            if len(f) == 1:
-                print(' ', f[0])
-                ds = xr.open_dataset(f[0])
+            ds = xr.open_mfdataset(f)
             ds['time'] = ds['time'] - np.timedelta64(12, 'h')
             grid_area = int(abs(ds['xc'][1] - ds['xc'][0]))
             ds['ice_con'] = (ds['ice_conc'].dims, ds['ice_conc'].values / 100.0)
@@ -74,7 +79,7 @@ class sic(object):
             v = 'SI_25km_' + cls.pole + '_ICECON_DAY'
             f = glob.glob(file_search)
             if len(f) == 0:
-                print('FATAL: No files found:', file_search)
+                print('FATAL: iceobs.sic.grab(), No files found:', file_search)
                 exit(1)
             if len(f) == 1:
                 print(' ', f[0])
@@ -105,7 +110,7 @@ class sic(object):
             else:
                 ds = calc_icecon_daily_climatology(save_file, cls.pole)
         else:
-            print('FATAL: Ob Name unknown', cls.ob_name)
+            print('FATAL: iceobs.sic.grab(), Ob Name unknown', cls.ob_name)
             exit(1)
         for key in list(ds.keys()):
             if key not in ['ice_con', 'lat', 'lon', 'land_mask', 'time', 'dayofyear']:

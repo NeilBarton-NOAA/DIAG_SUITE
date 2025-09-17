@@ -4,13 +4,6 @@
 #   compare REPLAY data sets
 #   https://docs.xarray.dev/en/stable/user-guide/plotting.html
 ########################
-# check platform
-import platform
-if 'hfe' in platform.uname()[1]:
-    print('only run on an interactive node')
-    print(platform.uname()[1])
-    exit(1)
-########################
 import argparse
 import calendar
 import numpy as np
@@ -21,7 +14,7 @@ import xarray as xr
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) )
 import PYTHON_TOOLS as npb
 
-parser = argparse.ArgumentParser( description = "Plot Integrated Ice Extent Error Between Runs and Observations")
+parser = argparse.ArgumentParser( description = "Plot Ice Extent between Runs and Observations")
 parser.add_argument('-d', '--dirs', action = 'store', nargs = 1, \
         help="top directory to find model output files")
 parser.add_argument('-e', '--exps', action = 'store', nargs = '+', \
@@ -52,12 +45,15 @@ if 'hemisphere' in MODEL.dims:
 ####################################
 # grab ice extent observations
 DATS = []
+grid = '10km'
+#grid = '25km'
+#grid = 'tripole'
 for ob in obs:
     print(  'obs', ob)
     if ob == 'analysis':
         D = MODEL.isel(forecast_hour = 0)
         D = D.drop_vars('forecast_hour')
-        D = D.sel(grid = 'tripole')
+        D = D.sel(grid = grid)
         D = D.squeeze()
     else:
         D = xr.open_dataset( tdir + '/' + exp + '/' + ob + '_ice_extent.nc')
@@ -79,7 +75,7 @@ OBS = npb.iceobs.add_forecast_hour(OBS, MODEL['forecast_hour'][-1].values)
 
 ####################################
 # grab only model output for same grid as obs
-MODEL = MODEL.sel(grid = 'tripole')
+MODEL = MODEL.sel(grid = grid)
 
 ####################################
 # plot month and sea ice exten
@@ -88,13 +84,12 @@ npb.plot.ice_extent.save_dir = save_dir
 npb.plot.ice_extent.MODEL = MODEL
 npb.plot.ice_extent.OBS = OBS
 for pole in ['NH', 'SH']:
-    #times = times.isel(time = times.dt.month.isin([1,2,12]))
     npb.plot.ice_extent.pole = pole
     npb.plot.ice_extent.times = times 
     npb.plot.ice_extent.title = 'All Times'
     npb.plot.ice_extent.create()
     # plot for each time
-    if (len(times) < 60):
+    if (len(times) < 70):
         for t in times:
             npb.plot.ice_extent.times = t
             npb.plot.ice_extent.title = np.datetime_as_string(t, timezone='UTC')[0:10]
@@ -107,16 +102,16 @@ for pole in ['NH', 'SH']:
         npb.plot.ice_extent.title = calendar.month_abbr[m].upper() 
         npb.plot.ice_extent.create() 
     # plot winter and summer cases
-    #m_times = times.isel(time = times.dt.month.isin([1,2,12]))
-    #if m_times.size > 5:
-    #    npb.plot.ice_extent.times = m_times 
-    #    npb.plot.ice_extent.title = 'Winter' 
-    #    npb.plot.ice_extent.create() 
-    #m_times = times.isel(time = times.dt.month.isin([6,7,8]))
-    #if m_times.size > 5:
-    #    npb.plot.ice_extent.times = m_times 
-    #    npb.plot.ice_extent.title = 'Summer' 
-    #    npb.plot.ice_extent.create() 
+    m_times = times.isel(time = times.dt.month.isin([1,2,12]))
+    if m_times.size > 5:
+        npb.plot.ice_extent.times = m_times 
+        npb.plot.ice_extent.title = 'Winter' 
+        npb.plot.ice_extent.create() 
+    m_times = times.isel(time = times.dt.month.isin([6,7,8]))
+    if m_times.size > 5:
+        npb.plot.ice_extent.times = m_times 
+        npb.plot.ice_extent.title = 'Summer' 
+        npb.plot.ice_extent.create() 
 
 ############
 # plot monthly per tau bias heat plots
@@ -133,4 +128,6 @@ if len(np.unique(times.dt.month)) == 12:
             npb.plot.monthdiff_imshow(d, DAT[i-1], var = 'extent', pole = 'north')
             d.attrs['DMIN'], d.attrs['DMAX'] = -0.5, 0.5
             npb.plot.monthdiff_imshow(d, DAT[i-1], var = 'extent', pole = 'south')
+
+debug = npb.utils.debug(True)
 

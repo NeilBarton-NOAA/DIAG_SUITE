@@ -15,10 +15,11 @@ def to_netcdf(ds, filename):
     print('SAVED:', filename)
 
 class extent(object):
+    grid_size = None
     @classmethod
     def calc(cls):
         dat = cls.ds[cls.var]
-        dims = cls.ds[cls.var].dims[-2::]
+        dims = cls.ds[cls.var].dims[-2::] if len(cls.ds[cls.var].dims) > 2 else cls.ds[cls.var].dims
         if 'nj' in cls.ds[cls.var].dims:
             DIV = 1e12
             area = cls.ds['tarea']
@@ -34,10 +35,13 @@ class extent(object):
                 pole_data.append(EXT)
             ds = xr.concat(pole_data, dim = 'hemisphere')
         else: 
-            if cls.var == 'ice_con':
-                grid_size = float(cls.ds.grid[0:2])**2.0
+            if cls.grid_size:
+                grid_size = cls.grid_size
             else:
-                grid_size = float(cls.ds[cls.var].dims[-1][-2::])**2.0
+                if cls.var == 'ice_con':
+                    grid_size = float(cls.ds.grid[-2::])**2.0
+                else:
+                    grid_size = float(cls.ds[cls.var].dims[-1][-2::])**2.0
             area = xr.ones_like(cls.ds[cls.var]) * grid_size
             dat = cls.ds[cls.var]
             DIV = 1e6
@@ -62,173 +66,94 @@ def daily_taus(DAT, var):
 def interp(ds_model, ds_obss, var = 'aice_d', force_calc = True):
     file_save = os.path.dirname(ds_model.file_name) + '/INTERP_' + os.path.basename(ds_model.file_name) 
     if (os.path.exists(file_save) == False) or (force_calc == True):
-        ds_model.rename({'TLAT': 'lat', 'TLON': 'lon'})
-        ds_model['lat'] = (ds_model['TLAT'].dims, ds_model['TLAT'].values)
-        ds_model['lon'] = (ds_model['TLON'].dims, ds_model['TLON'].values)
+        ds_model = ds_model.rename({'TLAT': 'lat', 'TLON': 'lon'})
         ds_model['mask'] = (ds_model['tmask'].dims, ds_model['tmask'].values)
         ds_model[var] = ds_model[var].where(ds_model['mask'] == 1, drop = False)
         ds_model = daily_taus(ds_model, var)
         ################################################
         # create regridder/interpolate data/ make new data array
         dir_weights = os.path.dirname(ds_model.file_name) + '/interp_weights'
-        if not os.path.exists(dir_weights):
-            os.makedirs(dir_weights)
-        INTERP_DSS, INTERP_NAMES = [], []
+        os.makedirs(dir_weights, exist_ok=True)
+        # remove data sets if they have the same grid as another
+        GRIDS, UNIQUE = set(), []
         for ds_obs in ds_obss:
-            if var + ds_obs.grid not in INTERP_NAMES:
-                ############
-                # determine grid name
-                file_weights = dir_weights + '/regridding_weights_CICE025_to_' + ds_obs.grid + 'km.nc'
-                ############
-                # interpolate if needed
-                print('interpolating to', ds_obs.grid)
-                ds_obs['mask'] = (ds_obs['land_mask'].dims, ds_obs['land_mask'].values)
-                if os.path.exists(file_weights):
-                    regridder = xe.Regridder(ds_model, ds_obs, method = 'nearest_s2d', reuse_weights=True, filename=file_weights)
-                else:
-                    regridder = xe.Regridder(ds_model, ds_obs, method = 'nearest_s2d', reuse_weights=False, filename=file_weights)
-                TMP = regridder(ds_model)
-                #import matplotlib.pyplot as plt
-                #plt.figure(1)
-                #plt.imshow(ds_model['aice'][0,0], origin = 'lower'); plt.colorbar()
-                #plt.figure(2)
-                #plt.imshow(TMP['aice'][0,0]); plt.colorbar(); plt.show()
-                #print(TMP)
-                #exit(1)
-                TMP = TMP.where(ds_obs['mask'].astype(bool))
-                if ds_obs.grid[2:4] == '25':
-                    TMP = TMP.rename_dims({'y': 'y' + ds_obs.grid, 'x': 'x' + ds_obs.grid})
-                else:
-                    TMP = TMP.rename_dims({'yc': 'y' + ds_obs.grid, 'xc': 'x' + ds_obs.grid})
-                TMP = TMP.rename({'lat': 'lat' + ds_obs.grid, 'lon': 'lon' + ds_obs.grid})
-                INTERP_NAMES.append(var + ds_obs.grid)
-                INTERP_DSS.append(TMP)
-                del TMP
-        for i, T in enumerate(INTERP_NAMES):
-            print('Adding to Dataset', T)
-            data = INTERP_DSS[i][var].values
-            dims = INTERP_DSS[i][var].dims
-            ds_model[T] = (dims, data)
-            data_bin = np.copy(data); del data
-            data_bin[data_bin > 0.15] = 1
-            data_bin[data_bin <= 0.15] = 0
-            data_bin[np.isnan(data_bin)] = 0
-            ds_model[T + '_binary'] = (dims, data_bin.astype("int32"))
-            del data_bin
-        data = ds_model[var].values
-        dims = ds_model[var].dims
-        data_bin = np.copy(data); del data
-        data_bin[data_bin > 0.15] = 1
-        data_bin[data_bin <= 0.15] = 0
-        data_bin[np.isnan(data_bin)] = 0
-        ds_model[var + '_binary'] = (dims, data_bin.astype("int32"))
+            if ds_obs.grid not in GRIDS:
+                UNIQUE.append(ds_obs)
+                GRIDS.add(ds_obs.grid)
+        # interp to these grids
+        for ds_obs in UNIQUE:
+            ############
+            # determine grid name
+            interp_method, extrap_method = 'bilinear', 'nearest_s2d'
+            file_weights = dir_weights + '/regridding_weights_CICE025_to_' + \
+                           ds_obs.grid + 'km_' + interp_method + '_extrap_' + extrap_method+ '.nc'
+            ############
+            # interpolate if needed
+            print('interpolating to', ds_obs.grid)
+            ds_obs['mask'] = (ds_obs['land_mask'].dims, ds_obs['land_mask'].values)
+            rw = True if os.path.exists(file_weights) else False
+            regridder = xe.Regridder(ds_model, ds_obs, method = interp_method, \
+                                     extrap_method = extrap_method, \
+                                     reuse_weights=rw, filename=file_weights)
+            TMP = regridder(ds_model)
+            TMP = TMP.where(ds_obs['mask'].astype(bool))
+            if ds_obs.grid[2:4] == '25':
+                TMP = TMP.rename_dims({'y': 'y' + ds_obs.grid, 'x': 'x' + ds_obs.grid})
+            else:
+                TMP = TMP.rename_dims({'yc': 'y' + ds_obs.grid, 'xc': 'x' + ds_obs.grid})
+            new_var = var + ds_obs.grid
+            print('Adding to Dataset', new_var)
+            ds_model['lat' + ds_obs.grid ] = (TMP['mask'].dims, ds_obs['lat'].values)
+            ds_model['lon' + ds_obs.grid ] = (TMP['mask'].dims, ds_obs['lon'].values)
+            ds_model[new_var] = (TMP[var].dims, TMP[var].values)
+            ds_model[new_var + '_binary'] = xr.where(ds_model[new_var] > 0.15,1,0).astype("int32")
+            del TMP
+        # orign grid changes for binary data
+        ds_model[var + '_binary'] = xr.where(ds_model[var] > 0.15,1,0).astype("int32")
+        ds_model = ds_model.rename({'lat': 'TLAT', 'lon': 'TLON'})
+        # write file
         encoding = { var: {"zlib": True, "complevel": 6} for var in ds_model.data_vars }
         ds_model.to_netcdf(file_save, format="NETCDF4", encoding=encoding)
         print('WROTE:', file_save)
 
-def iiee(DAT, OBS, CLIMO = False, var = 'aice_d'):
-    print('CALCULATING INTEGRATED ICE EDGE ERROR:') 
-    ####################################
-    # set up data arrays
-    if CLIMO:
-        ADD_CLIMO = True
-    OBS_NAMES = []
-    for i, ob in enumerate(OBS):
-        ob = grid_name(ob)
-        if ob.name not in OBS_NAMES:
-            OBS_NAMES.append(ob.name)
-            OBS_NAMES.append(ob.name + '_persistence')
-            if ADD_CLIMO:
-                OBS_NAMES.append(ob.name + '_climatology')
-    dims_iiee = ('obs_type', 'pole') + DAT[var].dims[0:-2] 
-    t = DAT['time'].values[0]
-    DAT['forecast_hour'] = DAT['forecast_hour'].where(DAT['forecast_hour'] >= 0, 0)
-    for i, ob in enumerate(OBS):
-        ob = grid_name(ob)
-        print(' Verifying Data:',ob.name, ob.grid_name)
-        p = 0 if 'NH' in ob.grid_name else 1
-        k = OBS_NAMES.index(ob.name)
-        v = var + ob.grid_name + '_binary'
-        area = float(ob.grid_name[2::])**2.
-        model_dims = DAT[v].dims
-        dim_sum = model_dims[-2::]
-        ####################################
-        # observations
-        t_first = t + np.timedelta64(int(DAT['forecast_hour'][0].values), 'h')
-        t_last = t + np.timedelta64(int(DAT['forecast_hour'][-1].values), 'h')
-        ob = ob.sel(time = slice(t_first, t_last))
-        ob['ice_con'] = ob['ice_con'].where(ob['ice_con'] < 2, 0)
-        ob['ice_con'] = ob['ice_con'].where(ob['ice_con'] < 0.15, 1, 0)
-        ob = ob.rename({'time' : 'forecast_hour'})
-        ob['forecast_hour'] = (ob['forecast_hour'].values - np.datetime64(t)) / np.timedelta64(1,'h')
-        ob = ob.rename_dims({'y': 'y' + ob.grid_name, 'x': 'x' + ob.grid_name }) #, 'time' : 'forecast_time'})
-        ob = ob.expand_dims(time = [t])
-        common = np.intersect1d(DAT['forecast_hour'].values, ob['forecast_hour'].values)
-        data = ob['ice_con'].sel(forecast_hour = common)
-        # model values
-        DAT = DAT.sel(forecast_hour = common)
-        model = DAT[v] 
-        # Set up the data set if needed
-        if i == 0:
-            coords = {  "obs_type"      : OBS_NAMES,
-                        "pole"          : ['north', 'south'],
-                        "time"          : [t],
-                        "forecast_hour" : common}
-            M_NUMS = np.empty((len(OBS_NAMES), 2, 1, len(common)))
-            M_NUMS = xr.DataArray(M_NUMS, coords = coords, dims = dims_iiee)
-            DAT['iiee'] = M_NUMS
-            DAT['aee'] = M_NUMS
-        #########################################
-        # forecast versus obs
-        _, data = xr.broadcast(model, data)
-        DAT['temp_diff'] = (model_dims, model.values - data.values) 
-        if 'NH' in ob.grid:
-            DAT['diff_NH'] = DAT['temp_diff']
-        elif 'SH' in ob.grid:
-            DAT['diff_SH'] = DAT['temp_diff'] 
-        DAT['iiee'][k,p,:] = (np.multiply(abs(DAT['temp_diff']), area)).sum(dim = dim_sum).values / 1e6
-        DAT['aee'][k,p,:]  = abs(np.multiply(DAT['temp_diff'], area).sum(dim = dim_sum).values / 1e6)
-        #print('forecast vs data', DAT['iiee'][k,p,:].sel(time = t).values)
-        DAT.drop('temp_diff')
-        #########################################
-        # persistence (first time of model) versus observations
-        k = OBS_NAMES.index(ob.name + '_persistence')
-        model = data.isel(forecast_hour = 0 ) 
-        _, model = xr.broadcast(data, model)
-        DAT['temp_diff'] = (model_dims, model.values - data.values) 
-        DAT['iiee'][k,p,:] = (np.multiply(abs(DAT['temp_diff']), area)).sum(dim = dim_sum).values / 1e6
-        DAT['aee'][k,p,:]  = abs(np.multiply(DAT['temp_diff'], area).sum(dim = dim_sum).values / 1e6)
-        #print('forecast vs persistence', DAT['iiee'][k,p,:].sel(time = t).values)
-        DAT.drop('temp_diff')
-        # climatology values versus observations
-        if ADD_CLIMO:
-            k = OBS_NAMES.index(ob.name + '_climatology')
-            data = ob['ice_con'].sel(forecast_hour = common)
-            clim = CLIMO[p]
-            doy = pd.to_datetime(ob['forecast_hour'].sel(forecast_hour = common).values).day_of_year
-            clim = clim.sel(dayofyear = doy.values)
-            clim = clim.rename_dims({'y': 'y' + ob.grid, 'x': 'x' + ob.grid, 'dayofyear' : 'forecast_hour'})
-            model = clim['ice_con'] #.sel(dayofyear = doy.values)
-            model = model.drop_vars('dayofyear')
-            model = model.where(model < 2, 0)
-            model = model.where(model < 0.15, 1, 0)
-            model = model.expand_dims(time = [t])
-            DAT['temp_diff'] = (model.dims, model.values - data.values)
-            iiee = np.array((np.multiply(abs(DAT['temp_diff']), area)).sum(dim = dim_sum).values / 1e6)
-            aee = abs(np.multiply(DAT['temp_diff'], area).sum(dim = dim_sum).values / 1e6)
-            if 'member' in DAT.dims:
-                for mem in DAT['member'].values:
-                    DAT['iiee'][k,p,mem,:,0] = iiee
-                    DAT['aee'][k,p,mem,:,0]  = aee
+class iiee(object):
+    grid_size = None
+    @classmethod
+    def calc(cls):
+        print('CALCULATING INTEGRATED ICE EDGE ERROR:', cls.grid) 
+        # variables could have different time and forecast_hour lenghts
+        ds_model, ds_obs = xr.align(cls.ds_model, cls.ds_obs, join = 'inner')
+        # variable names
+        var = 'aice' + cls.grid
+        if var == 'aice':
+            obs_var = 'aice'
+            area = ds_obs['tarea']
+            DIV = 1e12
+        else:
+            if 'yc' in ds_obs['ice_con'].dims:
+                ds_obs = ds_obs.rename({'yc': 'y' + cls.grid, 'xc': 'x' + cls.grid})
             else:
-                DAT['iiee'][k,p,:]= iiee
-                DAT['aee'][k,p,:]= iiee 
-        #exit(1)
-    DAT['me'] = (DAT['iiee'].dims, DAT['iiee'].values - DAT['aee'].values)
-    SAVE_DAT = DAT.copy()
-    SAVE_DAT.drop('TLAT')
-    SAVE_DAT.drop('TLON')
-    for key in SAVE_DAT.keys():
-        if key not in ['member', 'forecast_time', 'time', 'pole', 'tau', 'obs_type', 'iiee', 'aee', 'me', 'diff_NH', 'diff_SH']:
-            SAVE_DAT = SAVE_DAT.drop(key)
-    return SAVE_DAT
+                ds_obs = ds_obs.rename({'y': 'y' + cls.grid, 'x': 'x' + cls.grid})
+            obs_var = 'ice_con'
+            DIV = 1e6
+            area = float(cls.grid[-2::])**2.0
+        # set values to zero and one
+        ds_model[var] = xr.where(ds_model[var] > 0.15, 1, 0).astype("int32")
+        ds_obs[obs_var] = xr.where(ds_obs[obs_var] > 0.15, 1, 0).astype("int32")
+        # dimensions
+        dim_all = ds_model[var].dims
+        dim_sum = dim_all[-2::]
+        dim_save = dim_all[0:len(dim_all) - 2]
+        # calculations
+        ds_model['diff' + cls.grid] = ds_model[var] - ds_obs[obs_var]
+        iiee = (np.multiply(abs(ds_model['diff' + cls.grid]), area)).sum(dim = dim_sum).values / DIV
+        aee  = abs(np.multiply(ds_model['diff' + cls.grid], area).sum(dim = dim_sum).values / DIV)
+        ds_model['iiee'] = (dim_save, iiee)
+        ds_model['aee'] = (dim_save, aee)
+        ds_model['me'] = (dim_save, iiee - aee)
+        # Skim data set
+        dim_all = dim_all + tuple(['lat' + cls.grid, 'lon' + cls.grid, 'diff' + cls.grid, 'iiee', 'aee', 'me'])
+        for v in ds_model.variables:
+            if v not in list(dim_all):
+                ds_model = ds_model.drop(v)
+        return ds_model

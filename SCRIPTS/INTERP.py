@@ -6,10 +6,6 @@
 ########################
 # check platform
 import platform
-if 'hfe' in platform.uname()[1]:
-    print('only run on an interactive node')
-    print(platform.uname()[1])
-    exit(1)
 ########################
 import argparse
 import glob 
@@ -31,21 +27,15 @@ tdir = args.dirs[0]
 var = 'aice'
 obs_dir = args.obsdir[0]
 obs = args.obs
-########################
-# get observations
-#OBS_INTERP = []
-#for ob in obs:
-#    print(ob)
-#    if ob != 'analysis':
-#        OBS_INTERP.extend(npb.iceobs.get_icecon(ob, obs_dir))
-#print('after obs')
+
 ########################
 # get model results
 files = glob.glob(tdir + '/' + var + '*.nc')
 files.sort()
 npb.iceobs.sic.top_dir = obs_dir
 
-# obs
+########################
+# obs grid
 ds_model = xr.open_dataset(files[0])
 dtg = ds_model.time.dt.strftime('%Y%m%d').values[0]
 npb.iceobs.sic.dtg = dtg
@@ -59,8 +49,10 @@ for ob in obs:
             npb.iceobs.sic.pole = p
             ds_obs.append(npb.iceobs.sic.grab())
 
+########################
+# loop through files
 for f in files:
     print(f)
     ds_model = xr.open_dataset(f)
     ds_model = ds_model.assign_attrs({'file_name' : f }) 
-    npb.icecalc.interp(ds_model, ds_obs, var = var)
+    npb.icecalc.interp(ds_model, ds_obs, var = var, force_calc = False)

@@ -6,10 +6,6 @@
 ########################
 # check platform
 import platform
-if 'hfe' in platform.uname()[1]:
-    print('only run on an interactive node')
-    print(platform.uname()[1])
-    exit(1)
 ########################
 import argparse
 import calendar
@@ -19,8 +15,6 @@ import numpy as np
 import pandas as pd
 import sys
 import xarray as xr
-sys.path.append(os.path.dirname(os.path.realpath(__file__)) )
-import PYTHON_TOOLS as npb
 
 parser = argparse.ArgumentParser( description = "Compares Sea Ice Extent Between Runs and Observations")
 parser.add_argument('-v', '--var', action = 'store', nargs = 1, \

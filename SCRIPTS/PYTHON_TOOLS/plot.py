@@ -3,7 +3,9 @@ import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
-
+import os
+from . import utils
+debug = utils.debug(False)
 colors = ['maroon','blue','darkgreen']
 class ice_extent(object):
     pole = 'north'
@@ -54,7 +56,8 @@ class ice_extent(object):
         plt.title(cls.pole[0].upper() + 'H Sea Ice Extent: ' + cls.title)
         plt.savefig(fig_name, bbox_inches = 'tight')
         print('SAVED:', fig_name)
-        #plt.show(); exit(1)
+        if debug:
+            plt.show()
         plt.close()
 
 def monthdiff_imshow(DAT1, DAT2, var = 'extent', pole = 'north'):
@@ -145,53 +148,33 @@ class iiee(object):
     @classmethod
     def create(cls):
         exp_title = ''
-        if len(cls.DATS) > 1:
-            tau_max = []
-            for i, dat in enumerate(cls.DATS):
-                temp = dat['iiee'].sel(time = cls.times)
-                if cls.times.size == 1:
-                    index = temp.isnull().any(dim='pole').any('obs_type') == False
-                else: 
-                    index = temp.isnull().any(dim='pole').any('obs_type').any(dim='time') == False
-                tau_max.append(dat['forecast_hour'][index].max().values)
-            tau_max = np.max(tau_max)
-        else:
-            temp = cls.DATS[0]['iiee'].sel(time = cls.times)
-            if cls.times.size == 1:
-                index = temp.isnull().any(dim='pole').any('obs_type') == False
-            else: 
-                index = temp.isnull().any(dim='pole').any('obs_type').any(dim='time') == False
-            tau_max = cls.DATS[0]['forecast_hour'][index].max().values
-        for j, ob in enumerate(cls.OBS_TYPES):
-            for i, dat in enumerate(cls.DATS):
+        tau_max = cls.DATS[0]['forecast_hour'].max().values
+        for i, dat in enumerate(cls.DATS):
+            for j, ob in enumerate(cls.OBS_TYPES):
                 if dat.test_name not in exp_title:
                     exp_title = exp_title + dat.test_name + '_'
                 if cls.times.size == 1:
                     data = dat['iiee'].sel(obs_type = ob, 
-                                           pole = cls.pole, 
+                                           hemisphere = cls.pole, 
                                            time = cls.times, 
                                            forecast_hour = slice(0,tau_max))
                 else:
                     data = dat['iiee'].sel(obs_type = ob, 
-                                           pole = cls.pole, 
+                                           hemisphere = cls.pole, 
                                            time = cls.times, 
                                            forecast_hour = slice(0,tau_max)).mean('time')
-                label = dat.test_name + ' vs '
                 if 'persistence' in ob:
-                    print(ob)
-                    label = 'Persistence vs Obs: ' + ob.split('_')[0].upper()
                     style = ':'
                     c = 'k'
+                    label = ob 
                 elif 'climatology' in ob:
-                    print(ob)
-                    label = 'Climatology vs Obs: ' + ob.split('_')[0].upper()
                     style = '--'
                     c = 'k'
+                    label = ob 
                 else:
-                    print(dat.test_name, ob)
-                    label = label + 'Obs: ' + ob.split('_')[0].upper() 
                     style = '-'
-                    c = colors[i]
+                    c = colors[j]
+                    label = dat.test_name + ' vs ' + ob 
                 if 'member' in data.dims:
                     plt.plot(data['forecast_hour'].values/24, data.mean('member').values, 
                              linewidth = 2.0, color = c, linestyle = style, label = label )
@@ -200,9 +183,9 @@ class iiee(object):
                 else:
                     plt.plot(data['forecast_hour'].values/24, data.values, 
                              linewidth = 2.0, color = c, linestyle = style, label = label)
-        if cls.pole == 'north':
+        if cls.pole == 'NH':
             t = 'Arctic '
-        elif cls.pole == 'south':
+        elif cls.pole == 'SH':
             t = 'Antarctic '
         plt.title(t + cls.title)
         plt.xlim(data['forecast_hour'].min().values/24, data['forecast_hour'].max().values/24)
@@ -212,7 +195,8 @@ class iiee(object):
         fig_name = cls.save_dir + '/' + cls.pole[0].upper() + 'H_iiee_' + exp_title + cls.title.replace(' ','').replace(':','').replace('/','') + '.png'
         plt.savefig(fig_name)
         print('SAVED:', fig_name)  
-        #plt.show()
+        if debug:
+            plt.show()
         plt.close()
                
 class iiee_min_imshow(object):

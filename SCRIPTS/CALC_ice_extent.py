@@ -4,12 +4,6 @@
 #   compare REPLAY data sets
 #   https://docs.xarray.dev/en/stable/user-guide/plotting.html
 ########################
-# check platform
-import platform
-if 'hfe' in platform.uname()[1]:
-    print('only run on an interactive node')
-    print(platform.uname()[1])
-    exit(1)
 ########################
 import argparse
 import fnmatch
@@ -37,15 +31,14 @@ obs = args.obs
 var = 'aice'
 
 ####################################
-####################################
 # model data
 file_search = tdir + '/INTERP*' + var + '_*.nc'
-extent_file = tdir + '/ice_extent.nc'
 print(file_search)
+extent_file = tdir + '/ice_extent.nc'
 files = glob.glob(file_search)
 files.sort()
 poles = ['NH', 'SH']
-Force_Calc = True
+Force_Calc = False
 if not os.path.exists(extent_file) or Force_Calc == True:
     time_data = []
     for i, f in enumerate(files):
@@ -82,7 +75,7 @@ if not os.path.exists(extent_file) or Force_Calc == True:
     model_dat = dat
 else:
     model_dat = xr.open_dataset(extent_file)
-####################################
+
 ####################################
 # Calc Extent for Climatology
 file = obs_dir + '/ice_extent/climatology_ice_extent.nc'
@@ -103,7 +96,6 @@ if not os.path.exists(file):
     EXT.to_netcdf(file)
     print("WROTE:", file)
 
-####################################
 ####################################
 # obs data
 start_date = model_dat['time'][0].values
