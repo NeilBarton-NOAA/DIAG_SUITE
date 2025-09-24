@@ -4,9 +4,6 @@
 #   compare REPLAY data sets
 #   https://docs.xarray.dev/en/stable/user-guide/plotting.html
 ########################
-# check platform
-import platform
-########################
 import argparse
 import glob 
 import os

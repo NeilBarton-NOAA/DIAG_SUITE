@@ -1,21 +1,23 @@
 #!jinja2
 ########################
 # Items that may need changed
-##{% set EXPS = 'GFSBASE, GFSUPD01' %}                     # can be more than one
-##{% set START_DTG = '20240516T00' %}             # first day of model forecast date
-##{% set END_DTG = '20241223T00' %}               # last day of model forecast date
-##{% set FREQ = 'R40/20240516T00/P1D, R36/20241117T00/P1D' %}                          # time between runs one day
+{% set EXPS = 'GFSBASE, GFSUPD01' %}                     # can be more than one
+{% set START_DTG = '20240516T00' %}             # first day of model forecast date
+{% set END_DTG = '20241223T00' %}               # last day of model forecast date
+{% set FREQ = 'R47/20240518T00/P1D, R43/20241118T00/P1D' %}                          # time between runs one day
 
-{% set EXPS = "GFSRETRO" %}
-{% set START_DTG = '20241116T00' %}               # last day of model forecast date
-{% set END_DTG = '20250116T00' %}             # first day of model forecast date
-{% set FREQ = "P1D" %}
-{% set DOWNLOAD_MODEL_OUTPUT = False %}         # download the model output from HPSS
+{# {% set EXPS = "GFSRETRO" %} #}
+{# {% set START_DTG = '20241116T00' %} #}              # last day of model forecast date
+{# {% set END_DTG = '20250116T00' %} #}            # first day of model forecast date
+{# {% set FREQ = "P1D" %} #}
+
+########################
+{% set DOWNLOAD_OBS = False %}
+{% set DOWNLOAD_MODEL_OUTPUT = True %}         # download the model output from HPSS
 {% set PARSE_OUTPUT = True %}                  # put output in (time, forecast_hour, ...) dimension
 {% set MAIL_ADDRESS = "neil.barton@noaa.gov" %}
 {% set MACHINE = "GAEA" %}                      # machine
-{% set ICE_VARS = "aice, hi" %}                 # vars from CICE (add albedo and ice temperature) 
-# add sst, hs, Tsfc, albsni, meltt, meltb
+{% set ICE_VARS = "aice, hi, sst, sss, hs, Tsfc, albsni, meltt, meltb" %}                 # vars from CICE (add albedo and ice temperature) 
 {% set DEBUG_DIAG = False %}
 ####################################
 # define suite
@@ -39,21 +41,33 @@
     initial cycle point = {{ START_DTG }}
     final cycle point = {{ END_DTG }}
     runahead limit = P20
+    #[[special tasks]]
+    #    sequential = grab_obs
     [[queues]]
         [[[default]]]
-            limit = 42
+            limit = 22
+        [[[parse_data]]]
+            limit = 15
+            members = PARSE_OUTPUT_CICE
 
 ################################################
 # download data if needed from HPSS
     [[graph]]
-        {% if DOWNLOAD_MODEL_OUTPUT or PARSE_OUTPUT %}
+        {% if DOWNLOAD_MODEL_OUTPUT or PARSE_OUTPUT or DOWNLOAD_OBS %}
         {{ FREQ }}  = """
+        {% if DOWNLOAD_OBS %}
+            grab_obs
+        {% endif %}
         {% if DOWNLOAD_MODEL_OUTPUT %}
-            GRAB_OBS
             GRAB_EXPS:succeed-all               => PARSE_OUTPUT_CICE
         {% endif %} # if DOWNLOAD_MODEL_OUTPUT
+        {% if PARSE_OUTPUT %}
             PARSE_OUTPUT_CICE:succeed-all       => CLEAN
+            #PARSE_OUTPUT_CICE:succeed-all       => interp_cice
             CLEAN:succeed-all                   => POST_PARSE
+            
+            # maybe add INTERP here
+        {% endif %}
             """
         {% endif %}
 
@@ -121,18 +135,23 @@ unset ESMFMKFILE
         EXP=${CYLC_TASK_PARAM_experiment}
         ${SCRIPT_DIR}/GRAB_exps_from_hpss.sh ${DTG} ${EXP} 
         """
-    [[GRAB_OBS]]
-        inherit = HPSS 
-    [[grab_sea_ice_extents]]
-        inherit = GRAB_OBS
+    [[grab_obs]]
+        inherit = HPSS
         script = """
-        ${SCRIPT_DIR}/GRAB_obs_from_hpss.sh ice_extent 
+        source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
+        ${SCRIPT_DIR}/GRAB_obs.sh ${DTG} ${OBS} 
         """
-    [[grab_sea_ice_concentrations]]
-        inherit = GRAB_OBS
-        script = """
-        ${SCRIPT_DIR}/GRAB_obs_from_hpss.sh ice_concentration
-        """
+
+    #[[grab_sea_ice_extents]]
+    #    inherit = GRAB_OBS
+    #    script = """
+    #    ${SCRIPT_DIR}/GRAB_obs_from_hpss.sh ice_extent 
+    #    """
+    #[[grab_sea_ice_concentrations]]
+    #    inherit = GRAB_OBS
+    #    script = """
+    #    ${SCRIPT_DIR}/GRAB_obs_from_hpss.sh ice_concentration
+    #    """
 
 ################################################
 # parse data
@@ -163,6 +182,14 @@ unset ESMFMKFILE
 ################################################
 # Intepolate OBS and Model on Same Grid
    [[INTERP]]
+   [[interp_cice<experiment>]]
+        inherit = INTERP
+        script = """
+        EXP=${CYLC_TASK_PARAM_experiment}
+        source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
+        ${SCRIPT_DIR}/INTERP.py -d ${TOPDIR_OUTPUT}/${EXP} -od ${TOPDIR_OBS} -obs ${OBS}
+        """
+   
    [[interp_ice<experiment>]]
         inherit = INTERP
         script = """

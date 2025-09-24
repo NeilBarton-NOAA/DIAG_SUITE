@@ -32,14 +32,14 @@ var = 'aice'
 
 ####################################
 # model data
-file_search = tdir + '/INTERP*' + var + '_*.nc'
-print(file_search)
 extent_file = tdir + '/ice_extent.nc'
-files = glob.glob(file_search)
-files.sort()
 poles = ['NH', 'SH']
 Force_Calc = False
 if not os.path.exists(extent_file) or Force_Calc == True:
+    file_search = tdir + '/INTERP*' + var + '_*.nc'
+    print(file_search)
+    files = glob.glob(file_search)
+    files.sort()
     time_data = []
     for i, f in enumerate(files):
         print(f)
@@ -106,9 +106,8 @@ npb.iceobs.sic.top_dir = obs_dir
 npb.icecalc.extent.var = 'ice_con'
 for ob in obs:
     file = tdir + '/' + ob + '_ice_extent.nc'
+    npb.iceobs.sic.ob_name = ob
     if not os.path.exists(file):
-        print('CALC sea ice extent from', ob)
-        npb.iceobs.sic.ob_name = ob
         time_data = []
         for i, t in enumerate(time_coords):
             npb.iceobs.sic.dtg = t.strftime('%Y%m%d')
@@ -118,7 +117,8 @@ for ob in obs:
                 dat = npb.iceobs.sic.grab()
                 npb.icecalc.extent.ds = dat
                 EXT = npb.icecalc.extent.calc()
-                pole_data.append(EXT.expand_dims({"hemisphere" : [p]}))
+                if EXT:
+                    pole_data.append(EXT.expand_dims({"hemisphere" : [p]}))
             del EXT
             time_data.append(xr.concat(pole_data, dim = 'hemisphere'))
         EXT = xr.concat(time_data, dim = 'time')

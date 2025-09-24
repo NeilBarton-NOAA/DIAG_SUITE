@@ -44,7 +44,9 @@ class ice_extent(object):
         tau = obs['forecast_hour'].values/24.0
         styles = ['-','--','-.']
         for i, name in enumerate(obs['name'].values):
-            plt.plot(tau, obs.sel(name = name), color = 'k', linestyle = styles[i], linewidth = 2.0, label = name)
+            y = obs.sel(name = name)
+            m = ~np.isnan(y)
+            plt.plot(tau[m], y[m], color = 'k', linestyle = styles[i], linewidth = 2.0, label = name)
             fig_name = fig_name + name.replace(':', '').replace(' ','').replace('/','') + '_'
         ########################
         # figure options

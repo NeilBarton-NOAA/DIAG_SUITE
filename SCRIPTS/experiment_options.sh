@@ -4,7 +4,7 @@ declare -rx PS4='+ $(basename ${BASH_SOURCE[0]:-${FUNCNAME[0]:-"Unknown"}})[${LI
 EXP=${1:-EP6}
 dtg=${2:-${DTG}}
 SCRIPT_DIR=${SCRIPT_DIR:-$PWD}
-
+EXP=${EXP%,}
 ####################################
 # Variables based on experiment name
 case ${EXP} in 
@@ -30,13 +30,13 @@ case ${EXP} in
         SRC_DIR='/NCEPDEV/emc-global/2year/emc.glopara/WCOSS2/GFSv17/rt13_base*'
         WORKFLOW="GFS"
         RUN="gfs"
-        OBS="osi_saf analysis"
+        OBS="analysis"
         ;;
     'GFSUPD01')    
         SRC_DIR='/NCEPDEV/emc-global/2year/emc.glopara/WCOSS2/GFSv17/rt13_upd01*'
         WORKFLOW="GFS"
         RUN="gfs"
-        OBS="osi_saf analysis"
+        OBS="analysis"
         ;;
      'DUMMY')
         echo "DUMMY EXP for scripts"

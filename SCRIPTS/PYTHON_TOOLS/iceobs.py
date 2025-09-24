@@ -9,22 +9,6 @@ import sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../PYTHON_TOOLS')
 import PYTHON_TOOLS as npb
 
-def add_forecast_hour(OBS, last_forecast_hour):
-    t_last = OBS['time'][0] + np.timedelta64(int(last_forecast_hour), 'h')
-    times = OBS['time'].sel(time = slice(OBS['time'][0], t_last))
-    tau = (times - times[0]) / np.timedelta64(1,'h')
-    end_date = OBS['time'][-1].values - pd.Timedelta(hours = int(last_forecast_hour))
-    init_times = OBS['time'].sel(time=slice(None, end_date))
-    forecast_hours = xr.DataArray(data=tau.values, dims=['forecast_hour'], name='forecast_hour')
-    forecast_deltas = forecast_hours.astype('timedelta64[h]')
-    target_datetimes = xr.DataArray(init_times, dims=['time']) + forecast_deltas
-    OBS = OBS.sel(time=target_datetimes) 
-    OBS['valid_times'] = OBS['time']
-    OBS = OBS.drop_vars('time')
-    OBS['forecast_hour'] = tau.values
-    OBS['time'] = OBS['valid_times'].values[:,0]
-    return OBS 
-
 def add_land_mask(ds, var):
     v = ds[var]
     if len(v.shape) == 3:
