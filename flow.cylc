@@ -1,24 +1,29 @@
 #!jinja2
 ########################
 # Items that may need changed
-{% set EXPS = 'GFSBASE, GFSUPD01' %}                     # can be more than one
+{% set MAIL_ADDRESS = "neil.barton@noaa.gov" %} # email address for emails 
+{% set MACHINE = "GAEA" %}                      # machine
+
+########################
+# experiments
+{% set EXPS = 'GFSBASE, GFSUPD01' %}            # experiments can be more than one
 {% set START_DTG = '20240516T00' %}             # first day of model forecast date
 {% set END_DTG = '20241223T00' %}               # last day of model forecast date
-{% set FREQ = 'R47/20240518T00/P1D, R43/20241118T00/P1D' %}                          # time between runs one day
+{% set FREQ = 'R5/20240516T00/P1D' %}           # time between runs one day
+{# {% set FREQ = 'R47/20240518T00/P1D, R43/20241118T00/P1D' %} #}                       # time between runs one day
 
 {# {% set EXPS = "GFSRETRO" %} #}
-{# {% set START_DTG = '20241116T00' %} #}              # last day of model forecast date
-{# {% set END_DTG = '20250116T00' %} #}            # first day of model forecast date
+{# {% set START_DTG = '20241116T00' %} #}       # last day of model forecast date
+{# {% set END_DTG = '20250116T00' %} #}         # first day of model forecast date
 {# {% set FREQ = "P1D" %} #}
 
 ########################
-{% set DOWNLOAD_OBS = False %}
-{% set DOWNLOAD_MODEL_OUTPUT = True %}         # download the model output from HPSS
-{% set PARSE_OUTPUT = True %}                  # put output in (time, forecast_hour, ...) dimension
-{% set MAIL_ADDRESS = "neil.barton@noaa.gov" %}
-{% set MACHINE = "GAEA" %}                      # machine
-{% set ICE_VARS = "aice, hi, sst, sss, hs, Tsfc, albsni, meltt, meltb" %}                 # vars from CICE (add albedo and ice temperature) 
-{% set DEBUG_DIAG = False %}
+{% set DOWNLOAD_OBS = True %}
+{% set DOWNLOAD_MODEL_OUTPUT = True %}          # download the model output from HPSS
+{% set PARSE_OUTPUT = True %}                   # put output in (time, forecast_hour, ...) dimension
+{% set DEBUG_DIAG = False %}                    # skip submitting to queue and display maps
+{% set ICE_VARS = "aice, hi, sst, sss, hs, Tsfc, albsni, meltt, meltb" %}  # CICE vars to parse 
+
 ####################################
 # define suite
 #   hopefully user does not have to edit anything below here
@@ -27,8 +32,6 @@
 
 [scheduler]
     UTC mode = True
-    [[events]]
-        mail events = stall, abort, submission failed, fail
     [[mail]]
         to = {{ MAIL_ADDRESS }}
 
@@ -41,8 +44,8 @@
     initial cycle point = {{ START_DTG }}
     final cycle point = {{ END_DTG }}
     runahead limit = P20
-    #[[special tasks]]
-    #    sequential = grab_obs
+    [[special tasks]]
+        sequential = grab_obs
     [[queues]]
         [[[default]]]
             limit = 22
@@ -63,7 +66,7 @@
         {% endif %} # if DOWNLOAD_MODEL_OUTPUT
         {% if PARSE_OUTPUT %}
             PARSE_OUTPUT_CICE:succeed-all       => CLEAN
-            #PARSE_OUTPUT_CICE:succeed-all       => interp_cice
+            PARSE_OUTPUT_CICE:succeed-all       => interp_cice<experiment>
             CLEAN:succeed-all                   => POST_PARSE
             
             # maybe add INTERP here
@@ -74,7 +77,6 @@
 ################################################
 # processing needed after files are parsed
         R1/$ = """    
-            POST_PARSE               => INTERP
             POST_PARSE               => maps_obs_ice_thickness
 
             INTERP:succeed-all  => CALC_IIEE & CALC_ICE_EXTENT 
@@ -97,6 +99,8 @@ export SCRIPT_DIR=${CYLC_RUN_DIR}/${CYLC_WORKFLOW_NAME}/_cylc-install/source/SCR
 source ${SCRIPT_DIR}/MACHINE_CONFIG/modules.sh
 unset ESMFMKFILE
 """
+        [[[events]]]
+            mail events = submission failed, failed
         [[[environment]]]
             DTG                 = $(cylc cycle-point --template=%Y%m%d%H)
             EXPS                = {{ EXPS }}
@@ -124,8 +128,6 @@ unset ESMFMKFILE
             --clusters = es
             --constraint = f6
             --partition = dtn_f5_f6
-            {% else %}
-            --partition = service
             {% endif %}
     [[GRAB_EXPS]]
         inherit = HPSS
