@@ -20,20 +20,26 @@ case ${EXP} in
         RUN="gefs"
         OBS="noaa_cdr"
         ;;
-    'GFSRETRO')    
+    'RETRO10to12')    
         SRC_DIR='/5year/NCEPDEV/emc-global/emc.glopara/WCOSS2/GFSv17/retrotestgfs1*'
         WORKFLOW="GFS"
         RUN="gfs"
         OBS="osi_saf analysis"
         ;;
-    'GFSBASE')    
+    'RT13BASE')    
         SRC_DIR='/NCEPDEV/emc-global/2year/emc.glopara/WCOSS2/GFSv17/rt13_base*'
         WORKFLOW="GFS"
         RUN="gfs"
         OBS="analysis"
         ;;
-    'GFSUPD01')    
+    'RT13UPD01')    
         SRC_DIR='/NCEPDEV/emc-global/2year/emc.glopara/WCOSS2/GFSv17/rt13_upd01*'
+        WORKFLOW="GFS"
+        RUN="gfs"
+        OBS="analysis"
+        ;;
+    'RT15UPD02')    
+        SRC_DIR='/NCEPDEV/emc-global/2year/emc.glopara/WCOSS2/GFSv17/rt15_upd02*'
         WORKFLOW="GFS"
         RUN="gfs"
         OBS="analysis"
@@ -61,3 +67,7 @@ export TOPDIR_OBS=${WORK_DIR}/${USER}/DIAG/OBS
 export TOPDIR_OUTPUT=${WORK_DIR}/${USER}/DIAG
 export TOPDIR_FIGURES=${WORK_DIR}/${USER}/FIGURES
 
+########################
+# options in scripts
+export FORCE_CALC=False
+export N_TIMES=100

@@ -27,7 +27,7 @@ parser.add_argument('-fd', '--figuredir', action = 'store', nargs = 1, \
         help="directory of figures")
 args = parser.parse_args()
 tdir = args.dirs[0]
-exps = args.exps
+exps = [s.rstrip(',') for s in args.exps]
 save_dir = args.figuredir[0]
 obs = args.obs
 var = 'aice'
@@ -37,12 +37,11 @@ var = 'aice'
 DAT = []
 for i, e in enumerate(exps):
     print(e)
-    e = e.replace(',','').strip()
     f = tdir + '/' + e + '/iiee.nc'
     dat = xr.open_dataset(f)
     dat = dat.assign_attrs({'test_name' : e})
+    dat = dat.dropna(dim='time', how='any', subset=['iiee'])
     DAT.append(dat)
-
 ####################################
 # Get Times of Data Sets
 times = DAT[0]['time']
@@ -60,7 +59,7 @@ for pole in ['NH', 'SH']:
     npb.plot.iiee.title = 'All Times'
     npb.plot.iiee.create()     
     # plot for each time
-    if (len(times) < 70):
+    if (len(times) < npb.utils.N_TIMES()):
         for t in times:
             npb.plot.iiee.times = t
             npb.plot.iiee.title = np.datetime_as_string(t, timezone='UTC')[0:10]

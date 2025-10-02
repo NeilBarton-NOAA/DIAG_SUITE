@@ -42,7 +42,7 @@ class ice_extent(object):
         else:
             obs = cls.OBS['extent'].sel(time = cls.times, pole = cls.pole).mean('time')
         tau = obs['forecast_hour'].values/24.0
-        styles = ['-','--','-.']
+        styles = ['-','--','-.',':']
         for i, name in enumerate(obs['name'].values):
             y = obs.sel(name = name)
             m = ~np.isnan(y)
@@ -165,25 +165,24 @@ class iiee(object):
                                            hemisphere = cls.pole, 
                                            time = cls.times, 
                                            forecast_hour = slice(0,tau_max)).mean('time')
-                if 'persistence' in ob:
-                    style = ':'
-                    c = 'k'
-                    label = ob 
-                elif 'climatology' in ob:
-                    style = '--'
-                    c = 'k'
-                    label = ob 
-                else:
-                    style = '-'
-                    c = colors[j]
-                    label = dat.test_name + ' vs ' + ob 
-                if 'member' in data.dims:
-                    plt.plot(data['forecast_hour'].values/24, data.mean('member').values, 
+                default_style = {'style': '-', 'c': colors[i], 'label': f'{dat.test_name} vs {ob}'}
+                style_config = {'persistence': {'style': ':', 'c': 'k', 'label': ob},
+                                'climatology': {'style': '--', 'c': 'k', 'label': ob}}
+                plot_style = default_style
+                for key, style_props in style_config.items():
+                    if key in ob:
+                        plot_style = style_props
+                        break # Stop after the first match
+                style, c, label = plot_style['style'], plot_style['c'], plot_style['label']
+                plot = (ob not in ['persistence', 'climatology']) or (i + 1 == len(cls.DATS))
+                if plot:
+                    if 'member' in data.dims:
+                        plt.plot(data['forecast_hour'].values/24, data.mean('member').values, 
                              linewidth = 2.0, color = c, linestyle = style, label = label )
-                    plt.fill_between(data['forecast_hour'].values/24, data.min('member').values, 
+                        plt.fill_between(data['forecast_hour'].values/24, data.min('member').values, 
                              data.max('member').values, color = c, alpha = 0.5)
-                else:
-                    plt.plot(data['forecast_hour'].values/24, data.values, 
+                    else:
+                        plt.plot(data['forecast_hour'].values/24, data.values, 
                              linewidth = 2.0, color = c, linestyle = style, label = label)
         if cls.pole == 'NH':
             t = 'Arctic '

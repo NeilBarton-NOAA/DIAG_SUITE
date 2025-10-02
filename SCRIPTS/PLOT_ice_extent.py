@@ -25,7 +25,7 @@ parser.add_argument('-fd', '--figuredir', action = 'store', nargs = 1, \
         help="directory of figures")
 args = parser.parse_args()
 tdir = args.dirs[0]
-exps = args.exps
+exps = [s.rstrip(',') for s in args.exps]
 save_dir = args.figuredir[0]
 obs = args.obs
 var = 'aice'
@@ -34,7 +34,6 @@ os.makedirs(save_dir, exist_ok=True)
 # grab ice extent from models
 DATS = []
 for exp in exps:
-    exp = exp.replace(',','').strip()
     print('Experiment', exp)
     D = xr.open_dataset( tdir + '/' + exp + '/ice_extent.nc')
     DATS.append(D.expand_dims({"name" : [exp]}))
@@ -58,10 +57,9 @@ for ob in obs:
         D = D.squeeze()
         analysis = True
     else:
-        D = xr.open_dataset( tdir + '/' + exp + '/' + ob + '_ice_extent.nc')
+        D = xr.open_dataset( tdir + '/' + exps[0] + '/' + ob + '_ice_extent.nc')
         if 'hemisphere' in D.dims:
             D = D.rename({'hemisphere': 'pole'})
-    #TODO change name and analysis
     if 'name' not in D.dims:
         D = D.expand_dims({"name" : [ob]})
     DATS.append(D)
@@ -75,62 +73,17 @@ if analysis:
 
 ####################################
 # Give OBS forecast hours dimension
-#OBS = npb.utils.add_forecast_hour(OBS, MODEL['forecast_hour'][-1].values)
-#t = OBS['time'][0]
-#print(t.values)
-#print(OBS.sel(time = t, pole = 'NH', name = 'GFSUPD01').values)
-times = OBS['time'].values
-fh = MODEL['forecast_hour']
-hour = int((times[1] - times[0]) / np.timedelta64(1,'h'))
-fh = fh.where(fh >= 0, 0)
-#fh = np.arange(fh[0], fh[-1] + hour, hour)
-print(fh)
-print(hour)
-#print('taus need to be everyday to avoid NaNs')
-#forecast_hours = xr.DataArray(data=tau.values, dims=['forecast_hour'], name='forecast_hour')
-#forecast_deltas = forecast_hours.astype('timedelta64[h]')
-#print(forecast_deltas)
-#exit(1)
-#print(fh)
-forecast_deltas = fh.astype('timedelta64[h]')
-target_datetimes = OBS['time'] + forecast_deltas
-#print(target_datetimes)
-#exit(1)
-all_required_times = np.unique(target_datetimes.values)
-OBS = OBS.reindex(time=all_required_times)
-OBS = OBS.sel(time=target_datetimes)
-#print(OBS)
-#print(OBS['extent'].isel(name = 1, pole = 1, time = 1))
-#OBS = OBS.drop_vars('time')
-OBS['time'] = times #OBS['time'].values[:,0]
-sel_fh = np.arange(hour, fh[-1] + hour, hour)
-sel_fh = [-3].append(sel_fh)
-print(sel_fh)
-OBS = OBS.sel(forecast_hour = sel_fh)
+OBS = npb.utils.add_forecast_hour(OBS, MODEL['forecast_hour'][-1].values)
+OBS = OBS.dropna(dim='time', how='any', subset=list(OBS))
+new_names = ['analysis ' + n if n in exps else n for n in OBS['name'].values]
+OBS['name'] = new_names
 
-#print(OBS)
-#print(OBS.sel(time = t, pole = 'NH', name = 'GFSUPD01', forecast_hour = -3))
-#exit(1)
-
-#window_size = MODEL['forecast_hour'].size 
-#OBS = OBS.rolling(time=window_size).construct(window_dim="forecast_hour", stride=1)
-#OBS = OBS.dropna("time")
-#OBS['forecast_hour'] = MODEL['forecast_hour'].values
-#OBS = OBS.assign_coords(forecast_hour = MODEL['forecast_hour'])
-#exit(1)
-#print(OBS)
-#OBS = OBS.isel(name = 1, pole = 1)
-#print(OBS.isel(time = 0, forecast_hour = 1))
-#print(OBS.isel(time = 1, forecast_hour = 0))
-#exit(1)
 ####################################
 # grab only model output for same grid as obs
 MODEL = MODEL.sel(grid = grid)
-#print(MODEL['time'].size)
-#print(OBS['time'].size)
-MODEL, OBS = xr.align(MODEL, OBS, join = 'inner')
-#print(MODEL['forecast_hour'].values)
-#print(OBS['forecast_hour'].values)
+common_times = np.intersect1d(MODEL.time.values, OBS.time.values)
+OBS = OBS.sel(time = common_times)
+MODEL = MODEL.sel(time = common_times)
 
 ####################################
 # plot month and sea ice exten
@@ -149,7 +102,6 @@ for pole in ['NH', 'SH']:
             npb.plot.ice_extent.times = t
             npb.plot.ice_extent.title = np.datetime_as_string(t, timezone='UTC')[0:10]
             npb.plot.ice_extent.create()
-            exit(1)
     # plot by month
     months = np.unique(MODEL['time'].sel(time = times).dt.month)
     for m in months:

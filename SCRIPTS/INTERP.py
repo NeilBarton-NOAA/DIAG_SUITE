@@ -13,22 +13,20 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)) )
 import PYTHON_TOOLS as npb
 
 parser = argparse.ArgumentParser( description = "Interp data and writes fields in Ones and Zeros")
-parser.add_argument('-d', '--dirs', action = 'store', nargs = 1, \
-        help="top directory to find model output files")
+parser.add_argument('-f', '--files', action = 'store', nargs = '+', \
+        help="CICE files to interpolate")
 parser.add_argument('-od', '--obsdir', action = 'store', nargs = 1, \
         help="top directory for observations")
 parser.add_argument('-obs', '--obs', action = 'store', nargs = '+', \
         help="observations to use")
 args = parser.parse_args()
-tdir = args.dirs[0]
+files = args.files
 var = 'aice'
 obs_dir = args.obsdir[0]
 obs = args.obs
 
 ########################
 # get model results
-files = glob.glob(tdir + '/' + var + '*.nc')
-files.sort()
 npb.iceobs.sic.top_dir = obs_dir
 
 ########################
@@ -52,4 +50,4 @@ for f in files:
     print(f)
     ds_model = xr.open_dataset(f)
     ds_model = ds_model.assign_attrs({'file_name' : f }) 
-    npb.icecalc.interp(ds_model, ds_obs, var = var, force_calc = False)
+    npb.utils.interp(ds_model, ds_obs, var = var, force_calc = npb.utils.FORCE_CALC())

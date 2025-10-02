@@ -32,12 +32,12 @@ var = 'aice'
 ########################
 # get model results
 file_search = tdir + '/INTERP*' + var + '_*.nc'
+#file_search = tdir + '/INTERP*' + var + '_2024122*.nc'
 print(file_search)
 results_file = tdir + '/iiee.nc'
 files = glob.glob(file_search)
 files.sort()
 poles = ['NH', 'SH']
-Force_Calc = True
 npb.iceobs.sic.top_dir = obs_dir
 
 ########################
@@ -55,7 +55,7 @@ if 'climatology' in obs_calc:
 
 ########################
 # Loop through data to calc iiee (TODO 24 is likely too hard coded)
-if not os.path.exists(results_file) or Force_Calc == False:
+if not os.path.exists(results_file) or npb.utils.FORCE_CALC():
     time_data = []
     for i, f in enumerate(files):
         print(f)
@@ -84,7 +84,7 @@ if not os.path.exists(results_file) or Force_Calc == False:
             for v in anal.variables:
                 if v not in ['aice','time', 'TLAT', 'TLON', 'tarea']:
                     anal = anal.drop_vars(v)
-            anal = npb.iceobs.add_forecast_hour(anal, (anal['time'].shape[0] - 1) * 24.0)
+            anal = npb.utils.add_forecast_hour(anal, (anal['time'].shape[0] - 1) * 24.0)
             anal = anal.reindex_like(model_ds)
         ####################################
         # now calc iiee
@@ -117,7 +117,7 @@ if not os.path.exists(results_file) or Force_Calc == False:
                     else:
                         npb.iceobs.sic.pole = p
                         obs = npb.iceobs.sic.grab()
-                    obs = npb.iceobs.add_forecast_hour(obs, model_ds['forecast_hour'].max().values)
+                    obs = npb.utils.add_forecast_hour(obs, model_ds['forecast_hour'].max().values)
                     npb.icecalc.iiee.ds_obs = obs
                     npb.icecalc.iiee.grid = obs.grid
                 ds = npb.icecalc.iiee.calc()
@@ -139,3 +139,4 @@ if not os.path.exists(results_file) or Force_Calc == False:
     ds_time['TLON'] = (model_ds['TLON'].dims, model_ds['TLON'].values)
     ds_time.to_netcdf(results_file)
     print("WROTE:", results_file)
+

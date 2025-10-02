@@ -121,7 +121,7 @@ class iiee(object):
     @classmethod
     def calc(cls):
         print('CALCULATING INTEGRATED ICE EDGE ERROR:', cls.grid) 
-        # variables could have different time and forecast_hour lenghts
+        # variables could have different time and forecast_hour lenghts 
         ds_model, ds_obs = xr.align(cls.ds_model, cls.ds_obs, join = 'inner')
         # variable names
         var = 'aice' + cls.grid
@@ -151,6 +151,14 @@ class iiee(object):
         ds_model['iiee'] = (dim_save, iiee)
         ds_model['aee'] = (dim_save, aee)
         ds_model['me'] = (dim_save, iiee - aee)
+        if 'valid_times' in list(ds_obs):
+            ds_model['iiee'] = ds_model['iiee'].where(ds_obs['valid_times'].notnull())
+            ds_model['aee'] = ds_model['aee'].where(ds_obs['valid_times'].notnull())
+            ds_model['me'] = ds_model['me'].where(ds_obs['valid_times'].notnull())
+        if 'valid_times' in list(ds_model):
+            ds_model['iiee'] = ds_model['iiee'].where(ds_model['valid_times'].notnull())
+            ds_model['aee'] = ds_model['aee'].where(ds_model['valid_times'].notnull())
+            ds_model['me'] = ds_model['me'].where(ds_model['valid_times'].notnull())
         # Skim data set
         dim_all = dim_all + tuple(['lat' + cls.grid, 'lon' + cls.grid, 'diff' + cls.grid, 'iiee', 'aee', 'me'])
         for v in ds_model.variables:

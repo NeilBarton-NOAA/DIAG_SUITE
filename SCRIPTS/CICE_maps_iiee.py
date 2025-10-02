@@ -50,7 +50,13 @@ if obs == 'osi_saf':
     npb.maps.IIEE.var = 'diff' + suffix
     npb.maps.IIEE.lon = DAT['lon' + suffix]
     npb.maps.IIEE.lat = DAT['lat' + suffix]
+elif obs == 'analysis':
+    #suffix = pole[0].upper() 
+    npb.maps.IIEE.var = 'diff'
+    npb.maps.IIEE.lon = DAT['TLON']
+    npb.maps.IIEE.lat = DAT['TLAT']
 else:
+    print(DAT)
     print('diff var is unknown for ', obs)
     exit(1)
 #######################
@@ -72,7 +78,7 @@ for t in TAUS:
 
 ############
 # through each time step
-if (len(times) < 70):
+if (len(times) < npb.utils.N_TIMES()):
     for t in times:
         npb.maps.IIEE.times = t
         for tau in TAUS:

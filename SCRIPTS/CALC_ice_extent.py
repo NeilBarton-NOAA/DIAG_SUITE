@@ -34,8 +34,7 @@ var = 'aice'
 # model data
 extent_file = tdir + '/ice_extent.nc'
 poles = ['NH', 'SH']
-Force_Calc = False
-if not os.path.exists(extent_file) or Force_Calc == True:
+if not os.path.exists(extent_file) or npb.utils.FORCE_CALC():
     file_search = tdir + '/INTERP*' + var + '_*.nc'
     print(file_search)
     files = glob.glob(file_search)

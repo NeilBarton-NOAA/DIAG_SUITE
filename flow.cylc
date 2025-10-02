@@ -6,24 +6,20 @@
 
 ########################
 # experiments
-{% set EXPS = 'GFSBASE, GFSUPD01' %}            # experiments can be more than one
-{% set START_DTG = '20240516T00' %}             # first day of model forecast date
-{% set END_DTG = '20241223T00' %}               # last day of model forecast date
-{% set FREQ = 'R5/20240516T00/P1D' %}           # time between runs one day
-{# {% set FREQ = 'R47/20240518T00/P1D, R43/20241118T00/P1D' %} #}                       # time between runs one day
-
-{# {% set EXPS = "GFSRETRO" %} #}
-{# {% set START_DTG = '20241116T00' %} #}       # last day of model forecast date
-{# {% set END_DTG = '20250116T00' %} #}         # first day of model forecast date
-{# {% set FREQ = "P1D" %} #}
+{% set EXPS = 'RETRO10to12' %}                     # can be more than one
+{% set START_DTG = '20240518T00' %}             # first day of model forecast date
+{% set END_DTG =   '20250116T00' %}               # last day of model forecast date
+{% set FREQ = 'P1D' %}                          # time between runs one day
 
 ########################
+# options
 {% set DOWNLOAD_OBS = True %}
-{% set DOWNLOAD_MODEL_OUTPUT = True %}          # download the model output from HPSS
-{% set PARSE_OUTPUT = True %}                   # put output in (time, forecast_hour, ...) dimension
-{% set DEBUG_DIAG = False %}                    # skip submitting to queue and display maps
-{% set ICE_VARS = "aice, hi, sst, sss, hs, Tsfc, albsni, meltt, meltb" %}  # CICE vars to parse 
-
+{% set DOWNLOAD_MODEL_OUTPUT = False %}         # download the model output from HPSS
+{% set PARSE_OUTPUT = False %} # put output in (time, forecast_hour, ...) dimension
+{% set PERFORM_ANALYSIS = False %}
+{% set DEBUG_DIAG = False %}
+{% set ICE_VARS = "aice, hi, sst, sss, hs, Tsfc, albsni, meltt, meltb" %} # vars from CICE 
+{% set OBS = "amsr2, osi_saf, ostia, sss" %}
 ####################################
 # define suite
 #   hopefully user does not have to edit anything below here
@@ -38,6 +34,7 @@
 [task parameters]
     cice_vars = {{ ICE_VARS }}
     experiment = {{ EXPS }}
+    observations = {{ OBS }}
     poles = 'north', 'south'
 
 [scheduling]
@@ -45,12 +42,12 @@
     final cycle point = {{ END_DTG }}
     runahead limit = P20
     [[special tasks]]
-        sequential = grab_obs
+        sequential = GRAB_OBS
     [[queues]]
         [[[default]]]
             limit = 22
         [[[parse_data]]]
-            limit = 15
+            limit = 25
             members = PARSE_OUTPUT_CICE
 
 ################################################
@@ -59,14 +56,16 @@
         {% if DOWNLOAD_MODEL_OUTPUT or PARSE_OUTPUT or DOWNLOAD_OBS %}
         {{ FREQ }}  = """
         {% if DOWNLOAD_OBS %}
-            grab_obs
+            GRAB_OBS
         {% endif %}
         {% if DOWNLOAD_MODEL_OUTPUT %}
             GRAB_EXPS:succeed-all               => PARSE_OUTPUT_CICE
         {% endif %} # if DOWNLOAD_MODEL_OUTPUT
         {% if PARSE_OUTPUT %}
             PARSE_OUTPUT_CICE:succeed-all       => CLEAN
-            PARSE_OUTPUT_CICE:succeed-all       => interp_cice<experiment>
+            PARSE_OUTPUT_CICE:succeed-all       => INTERP
+            
+            INTERP:succeed-all                  => POST_PARSE 
             CLEAN:succeed-all                   => POST_PARSE
             
             # maybe add INTERP here
@@ -76,15 +75,15 @@
 
 ################################################
 # processing needed after files are parsed
+        {% if PERFORM_ANALYSIS %}
         R1/$ = """    
             POST_PARSE               => maps_obs_ice_thickness
-
-            INTERP:succeed-all  => CALC_IIEE & CALC_ICE_EXTENT 
+            POST_PARSE               => CALC_IIEE & CALC_ICE_EXTENT 
             
             CALC_ICE_EXTENT:succeed-all => plot_ice_extent
             CALC_IIEE:succeed-all   => plot_iiee & MAPS_ICE
             """
-
+        {% endif %}
 ################################################
 # tasks
 [runtime]
@@ -137,23 +136,17 @@ unset ESMFMKFILE
         EXP=${CYLC_TASK_PARAM_experiment}
         ${SCRIPT_DIR}/GRAB_exps_from_hpss.sh ${DTG} ${EXP} 
         """
-    [[grab_obs]]
+    [[GRAB_OBS]]
         inherit = HPSS
-        script = """
-        source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
-        ${SCRIPT_DIR}/GRAB_obs.sh ${DTG} ${OBS} 
+        pre-script = """
+        source ${SCRIPT_DIR}/experiment_options.sh DUMMY ${DTG}
         """
-
-    #[[grab_sea_ice_extents]]
-    #    inherit = GRAB_OBS
-    #    script = """
-    #    ${SCRIPT_DIR}/GRAB_obs_from_hpss.sh ice_extent 
-    #    """
-    #[[grab_sea_ice_concentrations]]
-    #    inherit = GRAB_OBS
-    #    script = """
-    #    ${SCRIPT_DIR}/GRAB_obs_from_hpss.sh ice_concentration
-    #    """
+    [[grab_obs<observations>]]
+        inherit = GRAB_OBS
+        script = """
+        OBS=${CYLC_TASK_PARAM_observations}
+        ${SCRIPT_DIR}/GRAB_OBS/grab_${OBS}.sh ${DTG}  
+        """
 
 ################################################
 # parse data
@@ -184,27 +177,24 @@ unset ESMFMKFILE
 ################################################
 # Intepolate OBS and Model on Same Grid
    [[INTERP]]
-   [[interp_cice<experiment>]]
-        inherit = INTERP
-        script = """
-        EXP=${CYLC_TASK_PARAM_experiment}
-        source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
-        ${SCRIPT_DIR}/INTERP.py -d ${TOPDIR_OUTPUT}/${EXP} -od ${TOPDIR_OBS} -obs ${OBS}
-        """
-   
-   [[interp_ice<experiment>]]
-        inherit = INTERP
-        script = """
-        EXP=${CYLC_TASK_PARAM_experiment}
-        source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
-        ${SCRIPT_DIR}/INTERP.py -d ${TOPDIR_OUTPUT}/${EXP} -od ${TOPDIR_OBS} -obs ${OBS}
-        """
         [[[directives]]]
-            --time = 08:00:00
+            --time = 01:00:00
+   [[interp_CICE<experiment>]]
+        inherit = INTERP
+        script = """
+        EXP=${CYLC_TASK_PARAM_experiment}
+        source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
+        files=$( ls ${TOPDIR_OUTPUT}/${EXP}/aice*${DTG}*.nc )
+        echo $files
+        ${SCRIPT_DIR}/INTERP.py -f ${files} -od ${TOPDIR_OBS} -obs ${OBS}
+        """
 
 ####################################
 # Calculate Ice Metrics   
    [[CALC_ICE_EXTENT]]
+        {% if DEBUG_DIAG %}
+        platform = localhost
+        {% endif %}
    [[calc_ice_extent<experiment>]]
         inherit = CALC_ICE_EXTENT
         script = """
@@ -215,6 +205,9 @@ unset ESMFMKFILE
         [[[directives]]]
             --time = 04:00:00
    [[CALC_IIEE]]
+        {% if DEBUG_DIAG %}
+        platform = localhost
+        {% endif %}
    [[calc_iiee<experiment>]]
         inherit = CALC_IIEE
         script = """
@@ -254,13 +247,12 @@ unset ESMFMKFILE
         [[[directives]]]
             --time = 08:00:00
             --mem = 0
-   [[maps_ice<poles><cice_vars><experiment>]]
+   [[maps_ice<poles><cice_vars>]]
         inherit = MAPS_ICE
         script = """
         EXP=${CYLC_TASK_PARAM_experiment}
         POLE=${CYLC_TASK_PARAM_poles}
         VAR=${CYLC_TASK_PARAM_cice_vars}
-        EXPS=${EXPS//,/}
         source ${SCRIPT_DIR}/experiment_options.sh ${EXP} ${DTG}
         ${SCRIPT_DIR}/CICE_maps.py -d ${TOPDIR_OUTPUT}/${EXP} -e ${EXP} -v ${VAR} -p ${POLE} -fd ${TOPDIR_FIGURES} -od ${TOPDIR_OBS} -obs ${OBS} 
         """
