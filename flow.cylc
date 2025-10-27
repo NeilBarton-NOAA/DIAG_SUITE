@@ -6,17 +6,17 @@
 
 ########################
 # experiments
-{% set EXPS = 'RETRO10to12' %}                     # can be more than one
-{% set START_DTG = '20240518T00' %}             # first day of model forecast date
-{% set END_DTG =   '20250116T00' %}               # last day of model forecast date
+{% set EXPS = 'GFSv17' %}                    # can be more than one
+{% set START_DTG = '20251018T00' %}             # first day of model forecast date
+{% set END_DTG =   '20251023T00' %}             # last day of model forecast date
 {% set FREQ = 'P1D' %}                          # time between runs one day
 
 ########################
 # options
-{% set DOWNLOAD_OBS = True %}
+{% set DOWNLOAD_OBS = False %}
 {% set DOWNLOAD_MODEL_OUTPUT = False %}         # download the model output from HPSS
 {% set PARSE_OUTPUT = False %} # put output in (time, forecast_hour, ...) dimension
-{% set PERFORM_ANALYSIS = False %}
+{% set PERFORM_ANALYSIS = True %}
 {% set DEBUG_DIAG = False %}
 {% set ICE_VARS = "aice, hi, sst, sss, hs, Tsfc, albsni, meltt, meltb" %} # vars from CICE 
 {% set OBS = "amsr2, osi_saf, ostia, sss" %}

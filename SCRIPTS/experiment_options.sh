@@ -44,6 +44,24 @@ case ${EXP} in
         RUN="gfs"
         OBS="analysis"
         ;;
+    'RT16UPD02')    
+        SRC_DIR='/NCEPDEV/emc-global/2year/emc.glopara/WCOSS2/GFSv17/rt16_upd02*'
+        WORKFLOW="GFS"
+        RUN="gfs"
+        OBS="analysis"
+        ;;
+    'RT17UPD03')    
+        SRC_DIR='/NCEPDEV/emc-global/2year/emc.glopara/WCOSS2/GFSv17/rt17_upd03*'
+        WORKFLOW="GFS"
+        RUN="gfs"
+        OBS="analysis"
+        ;;
+    'GFSv17')    
+        SRC_DIR='/NCEPDEV/emc-global/2year/emc.glopara/WCOSS2/GFSv17/rt16_upd02*'
+        WORKFLOW="GFS"
+        RUN="gfs"
+        OBS="analysis"
+        ;;
      'DUMMY')
         echo "DUMMY EXP for scripts"
         ;;

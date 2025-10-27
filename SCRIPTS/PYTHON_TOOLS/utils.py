@@ -36,6 +36,7 @@ def daily_taus(DAT, var):
         DAT = DAT.drop('tau')
         DAT = DAT.rename({'new_tau': 'tau', 'new_' + var: var})
     return DAT
+
 def add_forecast_hour(OBS, last_forecast_hour):
     t_last = OBS['time'][0] + np.timedelta64(int(last_forecast_hour), 'h')
     times = OBS['time'].sel(time = slice(OBS['time'][0], t_last))
@@ -54,54 +55,24 @@ def add_forecast_hour(OBS, last_forecast_hour):
     OBS['time'] = OBS['valid_times'].values[:,0]
     return OBS 
 
-def interp(ds_model, ds_obss, var = 'aice_d', force_calc = True):
-    file_save = os.path.dirname(ds_model.file_name) + '/INTERP_' + os.path.basename(ds_model.file_name) 
-    if (os.path.exists(file_save) == False) or (force_calc == True):
-        ds_model = ds_model.rename({'TLAT': 'lat', 'TLON': 'lon'})
-        ds_model['mask'] = (ds_model['tmask'].dims, ds_model['tmask'].values)
-        ds_model[var] = ds_model[var].where(ds_model['mask'] == 1, drop = False)
-        ds_model = daily_taus(ds_model, var)
-        ################################################
-        # create regridder/interpolate data/ make new data array
-        dir_weights = os.path.dirname(ds_model.file_name) + '/interp_weights'
-        os.makedirs(dir_weights, exist_ok=True)
-        # remove data sets if they have the same grid as another
-        GRIDS, UNIQUE = set(), []
-        for ds_obs in ds_obss:
-            if ds_obs.grid not in GRIDS:
-                UNIQUE.append(ds_obs)
-                GRIDS.add(ds_obs.grid)
-        # interp to these grids
-        for ds_obs in UNIQUE:
-            ############
-            # determine grid name
-            interp_method, extrap_method = 'bilinear', 'nearest_s2d'
-            file_weights = dir_weights + '/regridding_weights_CICE025_to_' + \
-                           ds_obs.grid + 'km_' + interp_method + '_extrap_' + extrap_method+ '.nc'
-            ############
-            # interpolate if needed
-            print('interpolating to', ds_obs.grid)
-            ds_obs['mask'] = (ds_obs['land_mask'].dims, ds_obs['land_mask'].values)
-            rw = True if os.path.exists(file_weights) else False
-            regridder = xe.Regridder(ds_model, ds_obs, method = interp_method, \
-                                     extrap_method = extrap_method, \
-                                     reuse_weights=rw, filename=file_weights)
-            TMP = regridder(ds_model)
-            TMP = TMP.where(ds_obs['mask'].astype(bool))
-            if ds_obs.grid[2:4] == '25':
-                TMP = TMP.rename_dims({'y': 'y' + ds_obs.grid, 'x': 'x' + ds_obs.grid})
-            else:
-                TMP = TMP.rename_dims({'yc': 'y' + ds_obs.grid, 'xc': 'x' + ds_obs.grid})
-            new_var = var + ds_obs.grid
-            print('Adding to Dataset', new_var)
-            ds_model['lat' + ds_obs.grid ] = (TMP['mask'].dims, ds_obs['lat'].values)
-            ds_model['lon' + ds_obs.grid ] = (TMP['mask'].dims, ds_obs['lon'].values)
-            ds_model[new_var] = (TMP[var].dims, TMP[var].values)
-            ds_model[new_var + '_binary'] = xr.where(ds_model[new_var] > 0.15,1,0).astype("int32")
-            del TMP
-        # orign grid changes for binary data
-        ds_model[var + '_binary'] = xr.where(ds_model[var] > 0.15,1,0).astype("int32")
-        ds_model = ds_model.rename({'lat': 'TLAT', 'lon': 'TLON'})
-        # write file
-        encoding = { var: {"zlib": True, "complevel": 6} for var in ds_model.data_vars }
+def interp(SRC_DATA, DES, interp_method = 'bilinear', extrap_method = 'nearest_s2d'):
+    ########################
+    # create regridder/interpolate data/ make new data array
+    dir_weights = os.path.dirname(SRC_DATA.file_name) + '/interp_weights'
+    os.makedirs(dir_weights, exist_ok=True)
+    ########################
+    # interp to these grids
+    print('interpolating to', DES.grid)
+    file_weights = dir_weights + '/regridding_weights_to_' + DES.grid \
+                   + '_' + interp_method + '_extrap_' + extrap_method+ '.nc'
+    rw = True if os.path.exists(file_weights) else False
+    ############
+    if 'land_mask' in DES.variables:
+        DES['mask'] = (DES['land_mask'].dims, DES['land_mask'].values)
+    regridder = xe.Regridder(SRC_DATA, DES, method = interp_method, \
+                      extrap_method = extrap_method, \
+                      reuse_weights=rw, filename=file_weights)
+    TMP = regridder(SRC_DATA)
+    TMP = TMP.where(DES['mask'].astype(bool))
+    return TMP
 

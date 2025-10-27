@@ -35,14 +35,14 @@ ds_model = xr.open_dataset(files[0])
 dtg = ds_model.time.dt.strftime('%Y%m%d').values[0]
 npb.iceobs.sic.dtg = dtg
 obs.append('climatology')
-ds_obs = []
+GRIDS = []
 for ob in obs:
     if ob != 'analysis':
         print(ob)
         npb.iceobs.sic.ob_name = ob
         for p in ['NH', 'SH']:
             npb.iceobs.sic.pole = p
-            ds_obs.append(npb.iceobs.sic.grab())
+            GRIDS.append(npb.iceobs.sic.grab())
 
 ########################
 # loop through files
@@ -50,4 +50,28 @@ for f in files:
     print(f)
     ds_model = xr.open_dataset(f)
     ds_model = ds_model.assign_attrs({'file_name' : f }) 
-    npb.utils.interp(ds_model, ds_obs, var = var, force_calc = npb.utils.FORCE_CALC())
+    file_save = os.path.dirname(ds_model.file_name) + '/INTERP_' + os.path.basename(ds_model.file_name) 
+    if not os.path.exists(file_save) or npb.utils.FORCE_CALC():
+        ############
+        # CICE Data has TLAT instead of lat
+        ds_model = ds_model.rename({'TLAT': 'lat', 'TLON': 'lon'})
+        ds_model['mask'] = (ds_model['tmask'].dims, ds_model['tmask'].values)
+        ds_model['aice'] = ds_model['aice'].where(ds_model['mask'] == 1, drop = False)
+        ds_model = npb.utils.daily_taus(ds_model, 'aice')
+        for GRID in GRIDS:
+            grid = GRID.grid
+            DAT = npb.utils.interp(ds_model, GRID) #, var = var)
+            if GRID.grid[2:4] == '25':
+                DAT = DAT.rename_dims({'y': 'y' + grid, 'x': 'x' + grid})
+            else:
+                DAT = DAT.rename_dims({'yc': 'y' + grid, 'xc': 'x' + grid})
+            new_var = var + grid
+            print('Adding to Dataset', new_var)
+            ds_model['lat' + grid ] = (DAT['mask'].dims, GRID['lat'].values)
+            ds_model['lon' + grid ] = (DAT['mask'].dims, GRID['lon'].values)
+            ds_model[new_var] = (DAT[var].dims, DAT[var].values)
+            del DAT
+        encoding = { var: {"zlib": True, "complevel": 6} for var in ds_model.data_vars }
+        ds_model.to_netcdf(file_save, format="NETCDF4", encoding=encoding)
+        print('WROTE:', file_save)
+        npb.utils.debug()

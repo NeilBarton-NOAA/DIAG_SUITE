@@ -1,7 +1,10 @@
 #!/bin/bash
-set -u
+set -xu
 DTG=${1:0:8} 
-DES=${2}/ice_concentration/osi_saf
+SCRIPT_DIR=${SCRIPT_DIR:-$(dirname "$0")}
+source ${SCRIPT_DIR}/experiment_options.sh DUMMY ${DTG}00
+DES=${TOPDIR_OBS}/ice_concentration/osi_saf
+
 END_DTG=$(date -d "${DTG} + 48 day" +%Y%m%d)
 mkdir -p ${DES} && cd ${DES}
 while [[ ${DTG} -le ${END_DTG} ]]; do
@@ -16,6 +19,5 @@ while [[ ${DTG} -le ${END_DTG} ]]; do
             echo 'file already downloaded', ${f}
         fi
     done
-    exit 1
     DTG=$(date -d "${DTG} + 1 day" +%Y%m%d)
 done
