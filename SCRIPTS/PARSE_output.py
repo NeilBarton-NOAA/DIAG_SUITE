@@ -13,32 +13,49 @@ import os
 import glob
 import numpy as np
 import pandas as pd
+import shutil
 import sys
 import xarray as xr
 
-parser = argparse.ArgumentParser( description = "Compares Sea Ice Extent Between Runs and Observations")
-parser.add_argument('-v', '--var', action = 'store', nargs = 1, \
-        help="variable to extract")
-parser.add_argument('-e', '--exp', action = 'store', nargs = 1, \
-        help="experiment name")
-parser.add_argument('-d', '--dirs', action = 'store', nargs = 1, \
-        help="top directory to find model output files")
+parser = argparse.ArgumentParser( description = "Adds forecast hour to CICE netcdf files")
+parser.add_argument('-f', '--files', action = 'store', nargs = '+', \
+        help="files to add forecast hour")
+parser.add_argument('-m', '--model', action = 'store', nargs = 1, \
+        help="variable to keep")
+parser.add_argument('-v', '--vars', action = 'store', nargs = '+', \
+        help="variable to keep")
+parser.add_argument('-o', '--output_file', action = 'store', nargs = 1, \
+        help="variable to keep")
 args = parser.parse_args()
-var = args.var[0]
-exp = args.exp[0]
-tdir = args.dirs[0]
-vars_keep = ['tarea', 'tmask']
+files = args.files
+model = args.model[0]
+var = args.vars
+f_write = args.output_file[0]
+
 ########################
-# open files, ensemble support is needed
-# ic file
-f = glob.glob(tdir + '/*ic.nc')[0]
-ic_ds = xr.open_dataset(f)
-ic_ds = ic_ds.drop_vars([v for v in ic_ds.data_vars if v not in [var] + vars_keep])
-# forecast files
-files = sorted(glob.glob(tdir + '/*.nc'))
-files = [f for f in files if "ic.nc" not in f]
+# CICE has an IC file under a name
+files.sort()
+for f in files:
+    if ".ic.nc" in f:
+        ic=f
+        files.remove(ic)
+
+#######################
+if model == 'ice':
+    vars_keep = ['tarea', 'tmask']
+    var = var + vars_keep
+    ########################
+    # open IC file
+    ic_ds = xr.open_dataset(f)
+    ic_ds = ic_ds[var]
+
+########################
+# open files
 ds = xr.open_mfdataset(files, coords='minimal', compat='override', parallel=True)
-ds = ds.drop_vars([v for v in ds.data_vars if v not in [var] + vars_keep])
+# edit names with the suffix
+rename_map = {name: name[:-2] for name in ds.variables if name.endswith('_h') or name.endswith('_d')}
+ds = ds.rename(rename_map)
+ds = ds[var]
 # concat data sets
 ds = xr.concat([ic_ds,ds], dim='time')
 
@@ -62,13 +79,18 @@ ds['forecast_hour'].attrs['long_name'] = 'valid_hour_of_forecast'
 for v in vars_keep:
     ds[v] = ds[v].isel(forecast_hour = 1)
     ds[v] = ds[v].squeeze()
-v = var.split('_')[0]
-ds = ds.rename({var : v })
-f_write = tdir.split(exp)[0] + exp + '/' + v + '_' + ds['time'].dt.strftime('%Y%m%d%H').values[0] + '.nc'
+
+ds = ds.drop_vars('ELON', errors='ignore')
+ds = ds.drop_vars('ELAT', errors='ignore')
+ds = ds.drop_vars('NLON', errors='ignore')
+ds = ds.drop_vars('NLAT', errors='ignore')
+
 encoding = {
-    var: {"zlib": True, "complevel": 4}  # Compression level 1–9
+    var: {"zlib": True, "complevel": 9}  # Compression level 1–9
     for var in ds.data_vars
 }
-ds.to_netcdf(f_write, format="NETCDF4", encoding=encoding)
+f_temp = f_write + '_temp'
+ds.to_netcdf(f_temp, format="NETCDF4", encoding=encoding)
+shutil.move(f_temp, f_write)
 print('WROTE:', f_write)
-
+print('PARSE_output.py SUCCESSFUL')

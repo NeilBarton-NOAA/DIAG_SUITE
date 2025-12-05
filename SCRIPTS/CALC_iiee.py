@@ -14,48 +14,38 @@ import glob
 import numpy as np
 import pandas as pd
 import xarray as xr
-sys.path.append(os.path.dirname(os.path.realpath(__file__)) )
+path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(os.getenv("PYTHON_TOOLS")) if 'slurm' in path else sys.path.append(path)
 import PYTHON_TOOLS as npb
 
 parser = argparse.ArgumentParser( description = "Calculates Integrated Ice Extent Error Between Runs and Observations")
-parser.add_argument('-d', '--dirs', action = 'store', nargs = 1, \
-        help="top directory to find model output files")
-parser.add_argument('-od', '--obsdir', action = 'store', nargs = 1, \
-        help="top directory for observations")
-parser.add_argument('-obs', '--obs', action = 'store', nargs = '+', \
-        help="observations to use")
+parser.add_argument('-f', '--files', action = 'store', nargs = '+', help="model files to calc iiee")
+parser.add_argument('-o', '--output_file', action = 'store', nargs = 1, help="output file to save")
+parser.add_argument('-obs', '--obs', action = 'store', nargs = '+', help="directory to observations to use")
 args = parser.parse_args()
-tdir = args.dirs[0]
-obs_dir = args.obsdir[0]
-obs_calc = args.obs + ['persistence', 'climatology']
+files = args.files
+output_file = args.output_file[0]
+obs_calc = args.obs + ['persistence', 'analysis']
 var = 'aice'
-########################
-# get model results
-file_search = tdir + '/INTERP*' + var + '_*.nc'
-#file_search = tdir + '/INTERP*' + var + '_2024122*.nc'
-print(file_search)
-results_file = tdir + '/iiee.nc'
-files = glob.glob(file_search)
-files.sort()
+EXP = output_file[0:-3].split('_')[-1]
 poles = ['NH', 'SH']
-npb.iceobs.sic.top_dir = obs_dir
 
 ########################
-# climatology data
-if 'climatology' in obs_calc:
+# Loop through data to calc iiee (TODO 24 hour forecasts is likely too hard coded)
+if not os.path.exists(output_file) or npb.utils.FORCE_CALC():
+    ########################
+    # climatology data
     print("Reading Climatology Data for IIEE Calc")
     clim = {}
+    npb.iceobs.sic.directory = [item for item in obs_calc if 'climatology' in item][0]
     for p in poles:
-        npb.iceobs.sic.ob_name = 'climatology'
         npb.iceobs.sic.pole = p
         ds = npb.iceobs.sic.grab()
         ds = ds.isel(time = 1)
         ds = ds.drop_vars('time')
         clim[p] = ds
-
-########################
-# Loop through data to calc iiee (TODO 24 is likely too hard coded)
-if not os.path.exists(results_file) or npb.utils.FORCE_CALC():
+    ########################
+    # loop through files
     time_data = []
     for i, f in enumerate(files):
         print(f)
@@ -72,29 +62,31 @@ if not os.path.exists(results_file) or npb.utils.FORCE_CALC():
         npb.iceobs.sic.dtg = dtgs
         ####################################
         # get analysis if using for calculation 
-        if 'analysis' in obs_calc:
-            anal_files = []
-            for dtg in dtgs:
-                file_search = tdir + '/INTERP*' + var + '_*' + dtg + '00.nc'
-                files = glob.glob(file_search)
-                if len(files) == 1:
-                    anal_files.append(files[0])
-            anal = xr.open_mfdataset(anal_files)
-            anal = anal.isel(forecast_hour = 0)
-            for v in anal.variables:
-                if v not in ['aice','time', 'TLAT', 'TLON', 'tarea']:
-                    anal = anal.drop_vars(v)
-            anal = npb.utils.add_forecast_hour(anal, (anal['time'].shape[0] - 1) * 24.0)
-            anal = anal.reindex_like(model_ds)
+        anal_files = []
+        f_prefix = f.split('/')[-1]
+        f_prefix = f_prefix.split(f_prefix[-13::])[0]
+        for dtg in dtgs:
+            file_search = os.path.dirname(f) + '/' + f_prefix + dtg + '*.nc'
+            anal_f = glob.glob(file_search)
+            if len(anal_f) == 1:
+                anal_files.append(anal_f[0])
+        anal = xr.open_mfdataset(anal_files)
+        anal = anal.isel(forecast_hour = 0)
+        anal = anal.drop_vars('forecast_hour')
+        anal = anal[['aice','time', 'lat', 'lon', 'tarea']]
+        anal = npb.utils.add_forecast_hour(anal, (anal['time'].shape[0] - 1) * 24.0)
+        anal = anal.reindex_like(model_ds)
         ####################################
         # now calc iiee
         obs_data = []
         for ob in obs_calc:
-            print(ob)
+            print(os.path.basename(ob))
             pole_data = []
             for p in poles:
+                ########################
+                # comes from model data
                 if ob in ['persistence', 'analysis']:
-                    lat_mask = model_ds['TLAT'] > 0 if p == 'NH' else model_ds['TLAT'] < 0 
+                    lat_mask = model_ds['lat'] > 0 if p == 'NH' else model_ds['lat'] < 0 
                     model = model_ds.copy()
                     model['aice'] = model['aice'].where(lat_mask)
                     npb.icecalc.iiee.ds_model = model
@@ -107,8 +99,8 @@ if not os.path.exists(results_file) or npb.utils.FORCE_CALC():
                     npb.icecalc.iiee.grid = ''
                     npb.icecalc.iiee.ds_obs = obs
                 else:
-                    npb.iceobs.sic.ob_name = ob
-                    if ob == 'climatology':
+                    npb.iceobs.sic.directory = ob
+                    if 'climatology' in ob:
                         obs = clim[p]
                         time_coords = pd.to_datetime(dtgs, format="%Y%m%d")
                         obs = obs.sel(dayofyear=time_coords.dayofyear).assign_coords(time=time_coords)
@@ -121,8 +113,8 @@ if not os.path.exists(results_file) or npb.utils.FORCE_CALC():
                     npb.icecalc.iiee.ds_obs = obs
                     npb.icecalc.iiee.grid = obs.grid
                 ds = npb.icecalc.iiee.calc()
-                pole_data.append(ds.expand_dims({'hemisphere' : [p]}))
-            ds = xr.concat(pole_data, dim = 'hemisphere')
+                pole_data.append(ds.expand_dims({'pole' : [p]}))
+            ds = xr.concat(pole_data, dim = 'pole')
             obs_data.append(ds.expand_dims({"obs_type" : [ob]}))
         ds = xr.concat(obs_data, dim = 'obs_type')
         time_data.append(ds)
@@ -130,13 +122,15 @@ if not os.path.exists(results_file) or npb.utils.FORCE_CALC():
     ########################
     # Remove some dimensions for variables that don't need them
     for v in ds_time.variables:
-        if v[0:3] in ['lat', 'lon']:
+        if v[0:3] in ['lat', 'lon'] and v not in ['lat', 'lon']:
             hem = 0 if v[3:5] == 'NH' else 1
-            ds_time[v] = ds_time[v].isel(time = 0, hemisphere = hem, obs_type = 0)
+            ds_time[v] = ds_time[v].isel(time = 0, pole = hem, obs_type = 0)
         if v != 'diff' and v[0:4] == 'diff':
-            ds_time[v] = ds_time[v].sel(hemisphere = v[4:6])
-    ds_time['TLAT'] = (model_ds['TLAT'].dims, model_ds['TLAT'].values)
-    ds_time['TLON'] = (model_ds['TLON'].dims, model_ds['TLON'].values)
-    ds_time.to_netcdf(results_file)
-    print("WROTE:", results_file)
+            ds_time[v] = ds_time[v].sel(pole = v[4:6])
+    ds_time.attrs['experiment_name'] = EXP
+    default_compression = {"zlib": True, "complevel": 9}
+    compress_encoding = {var_name: default_compression for var_name in ds_time.data_vars}
+    ds_time.to_netcdf(output_file)
+    print("WROTE:", output_file)
+print('CALC_iiee.py SUCCESSFUL')
 

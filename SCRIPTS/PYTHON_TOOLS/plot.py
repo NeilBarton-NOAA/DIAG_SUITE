@@ -23,11 +23,11 @@ class ice_extent(object):
         for i, name in enumerate(model['name'].values):
             dat = model.sel(name = name)
             if 'member' not in cls.MODEL.dims:
-                plt.plot(model_taus/24.0, dat.values, color = colors[i], label = name)
+                plt.plot(model_taus/24.0, dat.values, linewidth = 3.0, color = colors[i], label = name)
             else:
                 plt.plot(model_taus/24.0, dat.mean('member').values, 
                         color = colors[i], 
-                        linewidth = 2.0, 
+                        linewidth = 3.0, 
                         label = ds.test_name )
                 plt.fill_between(model_taus/24.0, 
                         dat.min('member').values, 
@@ -46,7 +46,7 @@ class ice_extent(object):
         for i, name in enumerate(obs['name'].values):
             y = obs.sel(name = name)
             m = ~np.isnan(y)
-            plt.plot(tau[m], y[m], color = 'k', linestyle = styles[i], linewidth = 2.0, label = name)
+            plt.plot(tau[m], y[m], color = 'k', linestyle = styles[i], linewidth = 3.0, label = name)
             fig_name = fig_name + name.replace(':', '').replace(' ','').replace('/','') + '_'
         ########################
         # figure options
@@ -157,12 +157,12 @@ class iiee(object):
                     exp_title = exp_title + dat.test_name + '_'
                 if cls.times.size == 1:
                     data = dat['iiee'].sel(obs_type = ob, 
-                                           hemisphere = cls.pole, 
+                                           pole = cls.pole, 
                                            time = cls.times, 
                                            forecast_hour = slice(0,tau_max))
                 else:
                     data = dat['iiee'].sel(obs_type = ob, 
-                                           hemisphere = cls.pole, 
+                                           pole = cls.pole, 
                                            time = cls.times, 
                                            forecast_hour = slice(0,tau_max)).mean('time')
                 default_style = {'style': '-', 'c': colors[i], 'label': f'{dat.test_name} vs {ob}'}
@@ -178,12 +178,12 @@ class iiee(object):
                 if plot:
                     if 'member' in data.dims:
                         plt.plot(data['forecast_hour'].values/24, data.mean('member').values, 
-                             linewidth = 2.0, color = c, linestyle = style, label = label )
+                             linewidth = 3.0, color = c, linestyle = style, label = label )
                         plt.fill_between(data['forecast_hour'].values/24, data.min('member').values, 
                              data.max('member').values, color = c, alpha = 0.5)
                     else:
                         plt.plot(data['forecast_hour'].values/24, data.values, 
-                             linewidth = 2.0, color = c, linestyle = style, label = label)
+                             linewidth = 3.0, color = c, linestyle = style, label = label)
         if cls.pole == 'NH':
             t = 'Arctic '
         elif cls.pole == 'SH':

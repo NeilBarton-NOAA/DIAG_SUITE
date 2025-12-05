@@ -27,19 +27,19 @@ class extent(object):
             pole_data = []
             for p in ['NH', 'SH']:
                 if p == 'NH':
-                    EXT = area.where((dat.TLAT > 10) & (dat >= 0.15)).sum(dim = dims) / DIV    
+                    EXT = area.where((dat.lat > 10) & (dat >= 0.15)).sum(dim = dims) / DIV    
                 elif p == 'SH':
-                    EXT = area.where((dat.TLAT < -10) & (dat >= 0.15)).sum(dim = dims) / DIV
-                EXT = EXT.expand_dims({"hemisphere" : [p]})
+                    EXT = area.where((dat.lat < -10) & (dat >= 0.15)).sum(dim = dims) / DIV
+                EXT = EXT.expand_dims({"pole" : [p]})
                 EXT.name = 'extent'
                 pole_data.append(EXT)
-            ds = xr.concat(pole_data, dim = 'hemisphere')
+            ds = xr.concat(pole_data, dim = 'pole')
         else: 
             if cls.grid_size:
                 grid_size = cls.grid_size
             else:
                 if cls.var == 'ice_con':
-                    grid_size = float(cls.ds.grid[-2::])**2.0
+                    grid_size = float(cls.ds.grid.replace('km','').replace('NH','').replace('SH',''))**2.0
                 else:
                     grid_size = float(cls.ds[cls.var].dims[-1][-2::])**2.0
             area = xr.ones_like(cls.ds[cls.var]) * grid_size
@@ -136,7 +136,7 @@ class iiee(object):
                 ds_obs = ds_obs.rename({'y': 'y' + cls.grid, 'x': 'x' + cls.grid})
             obs_var = 'ice_con'
             DIV = 1e6
-            area = float(cls.grid[-2::])**2.0
+            area = float(cls.grid.replace('km','').replace('NH','').replace('SH',''))**2.0
         # set values to zero and one
         ds_model[var] = xr.where(ds_model[var] > 0.15, 1, 0).astype("int32")
         ds_obs[obs_var] = xr.where(ds_obs[obs_var] > 0.15, 1, 0).astype("int32")

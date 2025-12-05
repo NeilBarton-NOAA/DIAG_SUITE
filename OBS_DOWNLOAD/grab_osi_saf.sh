@@ -1,11 +1,10 @@
 #!/bin/bash
 set -xu
-DTG=${1:0:8} 
-SCRIPT_DIR=${SCRIPT_DIR:-$(dirname "$0")}
-source ${SCRIPT_DIR}/experiment_options.sh DUMMY ${DTG}00
+DTG=${1}
+END_DTG=$(date -d "${2} + 48 day" +%Y%m%d)
+
 DES=${TOPDIR_OBS}/ice_concentration/osi_saf
 
-END_DTG=$(date -d "${DTG} + 48 day" +%Y%m%d)
 mkdir -p ${DES} && cd ${DES}
 while [[ ${DTG} -le ${END_DTG} ]]; do
     Y=${DTG:0:4}

@@ -11,35 +11,37 @@ import os
 import sys
 import pandas as pd
 import xarray as xr
-sys.path.append(os.path.dirname(os.path.realpath(__file__)) )
+path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(os.getenv("PYTHON_TOOLS")) if 'slurm' in path else sys.path.append(path)
 import PYTHON_TOOLS as npb
 
 parser = argparse.ArgumentParser( description = "Plot Ice Extent between Runs and Observations")
-parser.add_argument('-d', '--dirs', action = 'store', nargs = 1, \
-        help="top directory to find model output files")
-parser.add_argument('-e', '--exps', action = 'store', nargs = '+', \
-        help="experiments to calc ice extent. Also name of directory under -d")
+parser.add_argument('-f', '--files', action = 'store', nargs = '+', \
+        help="ice extent files")
 parser.add_argument('-obs', '--obs', action = 'store', nargs = '+', \
         help="observations to use")
 parser.add_argument('-fd', '--figuredir', action = 'store', nargs = 1, \
         help="directory of figures")
 args = parser.parse_args()
-tdir = args.dirs[0]
-exps = [s.rstrip(',') for s in args.exps]
-save_dir = args.figuredir[0]
+files = args.files
 obs = args.obs
+save_dir = args.figuredir[0]
 var = 'aice'
+poles = ['NH', 'SH']
 os.makedirs(save_dir, exist_ok=True)
 ####################################
 # grab ice extent from models
-DATS = []
-for exp in exps:
-    print('Experiment', exp)
-    D = xr.open_dataset( tdir + '/' + exp + '/ice_extent.nc')
+DATS, exps = [], []
+for f in files:
+    print(f)
+    D = xr.open_dataset(f)
+    exp = D.attrs['experiment_name'] 
+    exps.append(exp)
     DATS.append(D.expand_dims({"name" : [exp]}))
+
 MODEL = xr.concat(DATS, dim = 'name')
-if 'hemisphere' in MODEL.dims:
-    MODEL = MODEL.rename({'hemisphere': 'pole'})
+dtgs = MODEL['time'].dt.strftime('%Y%m%d').values.tolist()
+npb.iceobs.extent.dtgs = dtgs
 
 ####################################
 # grab ice extent observations
@@ -57,14 +59,30 @@ for ob in obs:
         D = D.squeeze()
         analysis = True
     else:
-        D = xr.open_dataset( tdir + '/' + exps[0] + '/' + ob + '_ice_extent.nc')
-        if 'hemisphere' in D.dims:
-            D = D.rename({'hemisphere': 'pole'})
+        file_extent = ob + '/ice_extent_' + dtgs[0] + '_to_' + dtgs[-1] + '.nc'
+        npb.iceobs.extent.directory = ob
+        D = npb.iceobs.extent.grab()
+
+        print(file_extent)
+        npb.utils.stop() 
+        npb.iceobs.sic.directory = ob
+        POLE = []
+        for p in poles:
+            print(p)
+            npb.iceobs.sic.pole = p
+            npb.icecalc.extent.ds = npb.iceobs.sic.grab()
+            dat = npb.icecalc.extent.calc()
+            POLE.append(dat.expand_dims({"pole" : [p]}))
+        POLE = xr.concat(POLE, dim = 'pole')
+        print(POLE)
+        #POLE.to_netcdf(obs_name)
+        npb.utils.stop() 
+        #if 'hemisphere' in D.dims:
+        #    D = D.rename({'hemisphere': 'pole'})
     if 'name' not in D.dims:
         D = D.expand_dims({"name" : [ob]})
     DATS.append(D)
 OBS = xr.concat(DATS, dim = 'name')
-
 ####################################
 # if analysis, need to reduce time
 if analysis:
@@ -91,7 +109,7 @@ times = MODEL['time']
 npb.plot.ice_extent.save_dir = save_dir
 npb.plot.ice_extent.MODEL = MODEL
 npb.plot.ice_extent.OBS = OBS
-for pole in ['NH', 'SH']:
+for pole in poles:
     npb.plot.ice_extent.pole = pole
     npb.plot.ice_extent.times = times 
     npb.plot.ice_extent.title = 'All Times'
@@ -113,12 +131,12 @@ for pole in ['NH', 'SH']:
     m_times = times.isel(time = times.dt.month.isin([1,2,12]))
     if m_times.size > 5:
         npb.plot.ice_extent.times = m_times 
-        npb.plot.ice_extent.title = 'Winter' 
+        npb.plot.ice_extent.title = 'DJF' 
         npb.plot.ice_extent.create() 
     m_times = times.isel(time = times.dt.month.isin([6,7,8]))
     if m_times.size > 5:
         npb.plot.ice_extent.times = m_times 
-        npb.plot.ice_extent.title = 'Summer' 
+        npb.plot.ice_extent.title = 'JJA' 
         npb.plot.ice_extent.create() 
 
 ############
@@ -138,4 +156,5 @@ if len(np.unique(times.dt.month)) == 12:
             npb.plot.monthdiff_imshow(d, DAT[i-1], var = 'extent', pole = 'south')
 
 debug = npb.utils.debug(True)
+print('PLOT_ice_extent.py SUCCESSFUL')
 

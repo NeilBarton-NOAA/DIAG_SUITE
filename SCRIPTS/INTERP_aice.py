@@ -7,39 +7,36 @@
 import argparse
 import glob 
 import os
+import shutil
 import sys
 import xarray as xr
-sys.path.append(os.path.dirname(os.path.realpath(__file__)) )
+path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(os.getenv("PYTHON_TOOLS")) if 'slurm' in path else sys.path.append(path)
 import PYTHON_TOOLS as npb
 
 parser = argparse.ArgumentParser( description = "Interp data and writes fields in Ones and Zeros")
 parser.add_argument('-f', '--files', action = 'store', nargs = '+', \
         help="CICE files to interpolate")
-parser.add_argument('-od', '--obsdir', action = 'store', nargs = 1, \
-        help="top directory for observations")
-parser.add_argument('-obs', '--obs', action = 'store', nargs = '+', \
+parser.add_argument('-obs', '--observations', action = 'store', nargs = '+', \
+        help="observations to interpolate aice to their grid")
+parser.add_argument('-o', '--output_file', action = 'store', nargs = 1, \
         help="observations to use")
 args = parser.parse_args()
 files = args.files
+obs = args.observations
+f_out = args.output_file[0]
 var = 'aice'
-obs_dir = args.obsdir[0]
-obs = args.obs
 
 ########################
-# get model results
-npb.iceobs.sic.top_dir = obs_dir
-
-########################
-# obs grid
+# get obs grid
 ds_model = xr.open_dataset(files[0])
 dtg = ds_model.time.dt.strftime('%Y%m%d').values[0]
 npb.iceobs.sic.dtg = dtg
-obs.append('climatology')
 GRIDS = []
 for ob in obs:
     if ob != 'analysis':
         print(ob)
-        npb.iceobs.sic.ob_name = ob
+        npb.iceobs.sic.directory = ob
         for p in ['NH', 'SH']:
             npb.iceobs.sic.pole = p
             GRIDS.append(npb.iceobs.sic.grab())
@@ -49,9 +46,9 @@ for ob in obs:
 for f in files:
     print(f)
     ds_model = xr.open_dataset(f)
+    ds_model = ds_model[[var] + ['tmask', 'tarea']]
     ds_model = ds_model.assign_attrs({'file_name' : f }) 
-    file_save = os.path.dirname(ds_model.file_name) + '/INTERP_' + os.path.basename(ds_model.file_name) 
-    if not os.path.exists(file_save) or npb.utils.FORCE_CALC():
+    if not os.path.exists(f_out) or npb.utils.FORCE_CALC():
         ############
         # CICE Data has TLAT instead of lat
         ds_model = ds_model.rename({'TLAT': 'lat', 'TLON': 'lon'})
@@ -71,7 +68,14 @@ for f in files:
             ds_model['lon' + grid ] = (DAT['mask'].dims, GRID['lon'].values)
             ds_model[new_var] = (DAT[var].dims, DAT[var].values)
             del DAT
-        encoding = { var: {"zlib": True, "complevel": 6} for var in ds_model.data_vars }
-        ds_model.to_netcdf(file_save, format="NETCDF4", encoding=encoding)
-        print('WROTE:', file_save)
+        ds_model = ds_model.drop_vars('ULON', errors='ignore')
+        ds_model = ds_model.drop_vars('ULAT', errors='ignore')
+        encoding = { var: {"zlib": True, "complevel": 9} for var in ds_model.data_vars }
+        f_temp = f_out + '_temp'
+        ds_model.to_netcdf(f_temp, format="NETCDF4", encoding=encoding)
+        shutil.move(f_temp, f_out)
+        print('WROTE:', f_out)
+        print('INTERP_aice.py SUCCESSFUL')
         npb.utils.debug()
+    else:
+        print('FILE ALREADY PRESENT:', f_out)

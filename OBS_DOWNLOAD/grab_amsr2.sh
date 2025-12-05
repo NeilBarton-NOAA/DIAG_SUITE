@@ -3,10 +3,9 @@
 # wget data from nsidc
 # sign-in information at ~/.netrc
 # https://n5eil01u.ecs.nsidc.org/DP1/AMSA/AU_SI25.001/2024.01.01/AMSR_U2_L3_SeaIce25km_B04_20240101.he5
-set -xu
-DTG=${1:0:8} 
-SCRIPT_DIR=${SCRIPT_DIR:-$(dirname "$0")}
-source ${SCRIPT_DIR}/experiment_options.sh DUMMY ${DTG}00
+set -u
+DTG=${1}
+END_DTG=$(date -d "${2} + 48 day" +%Y%m%d)
 DES=${TOPDIR_OBS}/ice_concentration/amsr2
 SITE=https://n5eil01u.ecs.nsidc.org/DP1/AMSA/AU_SI25.001
 
@@ -34,7 +33,6 @@ fi
 ########################
 ########################
 mkdir -p ${DES} && cd ${DES}
-END_DTG=$(date -d "${DTG} + 48 day" +%Y%m%d)
 while [ "${DTG}" != ${END_DTG} ]; do
     WGET ${DTG} ${DES}
     DTG=$(date -d "${DTG} + 1 day" +%Y%m%d)

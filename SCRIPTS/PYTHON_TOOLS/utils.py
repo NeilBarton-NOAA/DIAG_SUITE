@@ -6,7 +6,7 @@ import os
 
 # new utils
 def debug(exit_program = False):
-    debug = os.environ.get('DEBUG_DIAG', False)
+    debug = os.environ.get('DEBUG_DIAG', 'False').lower() in ('true', 't')
     if (debug == True) and (exit_program == True):
         print("Debug Flag is on, will exit")
         exit(1)
@@ -14,7 +14,7 @@ def debug(exit_program = False):
         return debug
 
 def FORCE_CALC():
-    return os.environ.get('FORCE_CALC', 'False').lower() == 'true'
+    return os.environ.get('FORCE_CALC', 'False').lower() in ('true', 't')
 
 def N_TIMES():
     return int(os.environ.get('N_TIMES', 50))
@@ -43,8 +43,10 @@ def add_forecast_hour(OBS, last_forecast_hour):
     end_date = OBS['time'][-1].values - pd.Timedelta(hours = int(last_forecast_hour))
     init_times = OBS['time'].sel(time=slice(None, end_date))
     tau = (times - times[0]) / np.timedelta64(1,'h')
-    forecast_hours = xr.DataArray(data=tau.values, dims=['forecast_hour'], name='forecast_hour')
-    forecast_deltas = forecast_hours.astype('timedelta64[h]')
+    hours_np = tau.values
+    deltas_h = hours_np.astype('timedelta64[h]')
+    deltas_ns = deltas_h.astype('timedelta64[ns]')
+    forecast_deltas = xr.DataArray(data=deltas_ns, dims=['forecast_hour'], name='forecast_hour')
     target_datetimes = xr.DataArray(init_times, dims=['time']) + forecast_deltas
     all_required_times = np.unique(target_datetimes.values)
     OBS = OBS.reindex(time=all_required_times)

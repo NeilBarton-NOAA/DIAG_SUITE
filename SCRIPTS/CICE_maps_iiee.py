@@ -44,7 +44,7 @@ save_dir = args.figuredir[0]
 print(exp)
 f = tdir + '/iiee.nc'
 DAT = xr.open_dataset(f)
-DAT = DAT.sel(obs_type = obs, hemisphere = pole[0].upper() + 'H')
+DAT = DAT.sel(obs_type = obs, pole = pole[0].upper() + 'H')
 if obs == 'osi_saf':
     suffix = pole[0].upper() + 'H10'
     npb.maps.IIEE.var = 'diff' + suffix

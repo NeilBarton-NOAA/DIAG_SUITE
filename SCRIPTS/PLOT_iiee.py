@@ -14,7 +14,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 import xarray as xr
-sys.path.append(os.path.dirname(os.path.realpath(__file__)) )
+path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(os.getenv("PYTHON_TOOLS")) if 'slurm' in path else sys.path.append(path)
 import PYTHON_TOOLS as npb
 parser = argparse.ArgumentParser( description = "Plot Integrated Ice Extent Error Between Runs and Observations")
 parser.add_argument('-d', '--dirs', action = 'store', nargs = 1, \
@@ -75,12 +76,12 @@ for pole in ['NH', 'SH']:
     m_times = times.isel(time = times.dt.month.isin([1,2,12]))
     if m_times.size > 5:
         npb.plot.iiee.times = m_times 
-        npb.plot.iiee.title = 'Winter' 
+        npb.plot.iiee.title = 'DJF' 
         npb.plot.iiee.create() 
     m_times = times.isel(time = times.dt.month.isin([6,7,8]))
     if m_times.size > 5:
         npb.plot.iiee.times = m_times 
-        npb.plot.iiee.title = 'Summer' 
+        npb.plot.iiee.title = 'JJA' 
         npb.plot.iiee.create() 
 
 if len(np.unique(times.dt.month)) == 12:
@@ -101,3 +102,5 @@ if len(np.unique(times.dt.month)) == 12:
             npb.plot.monthdiff_imshow(D.sel(obs_type = obs_types[0]), DAT[i-1].sel(obs_type = obs_types[0]), 
                                         var = 'iiee', pole = 'south')
 debug = npb.utils.debug(True)
+print('PLOT_iiee.py SUCCESSFUL')
+

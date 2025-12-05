@@ -11,5 +11,5 @@ else
     exit 1
 fi
 
-echo "${SCRIPT_DIR}/MACHINE_CONFIG/modules_${machine}.sh"
-source ${SCRIPT_DIR}/MACHINE_CONFIG/modules_${machine}.sh
+echo "${SCRIPT_DIR}/MACHINE/modules_${machine}.sh"
+source ${SCRIPT_DIR}/MACHINE/modules_${machine}.sh
