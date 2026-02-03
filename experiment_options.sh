@@ -7,32 +7,8 @@ export HPC_ACCOUNT=${3:-$COMPUTE_ACCOUNT}
 ####################################
 # Variables based on experiment name
 case ${EXP} in 
-    'GFSv17')    
-        HPSS_DIR='/NCEPDEV/emc-global/2year/emc.glopara/WCOSS2/GFSv17/rt*'
-        RUN='gfs'
-        ;;
-    'RT13UPD01')    
-        HPSS_DIR='/NCEPDEV/emc-global/2year/emc.glopara/WCOSS2/GFSv17/rt13_upd01*'
-        RUN='gfs'
-        ice_hpss_file='ice_6hravg.tar'
-        ;;
-    'RT15UPD02')    
-        HPSS_DIR='/NCEPDEV/emc-global/2year/emc.glopara/WCOSS2/GFSv17/rt15_upd02*'
-        RUN='gfs'
-        ice_hpss_file='ice_6hravg.tar'
-        ;;
-    'RT16UPD02')    
-        HPSS_DIR='/NCEPDEV/emc-global/2year/emc.glopara/WCOSS2/GFSv17/rt16_upd02*'
-        RUN='gfs'
-        ice_hpss_file='ice_6hravg.tar'
-        ;;
-    'RT17UPD03')    
-        HPSS_DIR='/NCEPDEV/emc-global/2year/emc.glopara/WCOSS2/GFSv17/rt17_upd03*'
-        RUN='gfs'
-        ice_hpss_file='ice_6hravg.tar'
-        ;;
     'RETROV17')    
-        HPSS_DIR='/5year/NCEPDEV/emc-global/emc.glopara/WCOSS2/GFSv17/retrov17*'
+        HPSS_DIR='/5year/NCEPDEV/emc-global/emc.glopara/*/GFSv17/retrov17*'
         RUN='gfs'
         ice_hpss_file='ice_6hravg.tar'
         ocn_hpss_file='ocean_6hravg.tar'
