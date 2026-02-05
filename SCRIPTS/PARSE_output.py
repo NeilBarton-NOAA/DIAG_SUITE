@@ -51,6 +51,7 @@ if model == 'ice':
 
 ########################
 # open files
+print('OPENING FILES')
 ds = xr.open_mfdataset(files, coords='minimal', compat='override', parallel=True)
 # edit names with the suffix
 rename_map = {name: name[:-2] for name in ds.variables if name.endswith('_h') or name.endswith('_d')}
@@ -58,6 +59,7 @@ ds = ds.rename(rename_map)
 ds = ds[var]
 # concat data sets
 ds = xr.concat([ic_ds,ds], dim='time')
+print('CREATED XARRAY DataSet')
 
 ########################
 # Change Time Dimension to forecast time
@@ -85,8 +87,9 @@ ds = ds.drop_vars('ELAT', errors='ignore')
 ds = ds.drop_vars('NLON', errors='ignore')
 ds = ds.drop_vars('NLAT', errors='ignore')
 
+print('WRITING file')
 encoding = {
-    var: {"zlib": True, "complevel": 9}  # Compression level 1–9
+    var: {"zlib": True, "complevel": 6}  # Compression level 1–9
     for var in ds.data_vars
 }
 f_temp = f_write + '_temp'
