@@ -2,9 +2,9 @@
 set -u
 EXP=${1}
 MODEL=${2:-'ice'}
-export BACKGROUND_JOB=F
+BACKGROUND_JOB=F
 DIAG_DIR=${PWD}
-source ${DIAG_DIR}/experiment_options.sh ${EXP} ${MODEL}
+source ${DIAG_DIR}/experiment_options.sh ${EXP} ${MODEL} ${COMPUTE_ACOUNT}
 source ${DIAG_DIR}/SCRIPTS/functions.sh
 source ${DIAG_DIR}/MACHINE/config.sh
         

@@ -17,7 +17,8 @@ elif [[ ${machine} == hercules* ]]; then
 elif [[ ${machine} == gaea* || ${machine} == dtn* || ${machine} == c6* ]]; then
     machine=gaea
     export WORK_DIR=/gpfs/f6/sfs-emc/scratch
-    SUBMIT_HPSS_SUFFIX="--qos=hpss --mem=0 --clusters=es --partition=dtn_f5_f6 --constraint=f6"
+    SUBMIT_SUFFIX="--qos=normal --clusters=c6 --partition=batch"
+    SUBMIT_HPSS_SUFFIX="--qos=hpss --clusters=es --partition=dtn_f5_f6 --constraint=f6"
 elif [[ ${machine} == u* ]]; then
     machine=ursa
     export WORK_DIR=/scratch4/NCEPDEV/stmp
@@ -26,20 +27,16 @@ else
     echo 'FATAL: MACHINE UNKNOWN'
     exit 1
 fi
-
-SUBMIT="${BATCH_SYSTEM} --job-name=${JOB_NAME} 
+SUBMIT="${BATCH_SYSTEM} 
+    --job-name=${JOB_NAME} 
     --output=${DIAG_DIR}/logs/${JOB_NAME}.out
     --error=${DIAG_DIR}/logs/${JOB_NAME}.out
     --time=${WALLTIME} 
-    --account=${HPC_ACCOUNT} --qos=normal
-    --ntasks=1 --mem=0
-    --clusters=c6 --partition=batch"
-SUBMIT_HPSS="${BATCH_SYSTEM} --job-name=${JOB_NAME} 
-    --output=${DIAG_DIR}/logs/${JOB_NAME}.out
-    --error=${DIAG_DIR}/logs/${JOB_NAME}.out
-    --time=${WALLTIME} 
-    --account=${HPC_ACCOUNT}
-    --ntasks=1"" ${SUBMIT_HPSS_SUFFIX}"
+    --account=${HPC_ACCOUNT} 
+    --ntasks=1 
+    --mem=0 
+    ${SUBMIT_SUFFIX}"
+SUBMIT_HPSS="${SUBMIT} ${SUBMIT_HPSS_SUFFIX}"
 
 if [[ ${BACKGROUND_JOB:-F} == T ]]; then
     SUBMIT=""

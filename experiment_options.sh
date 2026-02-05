@@ -3,7 +3,7 @@ set -u
 [[ ${DEBUG:-F} == T ]] && declare -rx PS4='+ $(basename ${BASH_SOURCE[0]:-${FUNCNAME[0]:-"Unknown"}})[${LINENO}]'"(${1}): "
 EXP=${1}
 MODEL=${2}
-export HPC_ACCOUNT=${3:-$COMPUTE_ACCOUNT}
+export HPC_ACCOUNT=${3}
 ####################################
 # Variables based on experiment name
 case ${EXP} in 
