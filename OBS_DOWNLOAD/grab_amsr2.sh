@@ -6,6 +6,12 @@
 set -u
 DTG=${1}
 END_DTG=$(date -d "${2} + 48 day" +%Y%m%d)
+TARGET_SEC=$(date -d "${END_DTG}" +%s)
+CURRENT_SEC=$(date +%s)
+if [[ ${TARGET_SEC} -gt ${CURRENT_SEC} ]]; then
+    END_DTG=$(date -d "5 days ago" +%Y%m%d)
+fi
+
 DES=${TOPDIR_OBS}/ice_concentration/amsr2
 SITE=https://n5eil01u.ecs.nsidc.org/DP1/AMSA/AU_SI25.001
 

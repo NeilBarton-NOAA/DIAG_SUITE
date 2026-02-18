@@ -63,7 +63,7 @@ if not os.path.exists(output_file) or npb.utils.FORCE_CALC():
     dat = xr.concat(time_data, dim = 'time')
     dat = dat.to_dataset()
     dat.attrs['experiment_name'] = EXP
-    default_compression = {"zlib": True, "complevel": 9}
+    default_compression = {"zlib": True, "complevel": 6}
     compress_encoding = {var_name: default_compression for var_name in dat.data_vars}
     dat.to_netcdf(output_file)
     print("WROTE:", output_file)

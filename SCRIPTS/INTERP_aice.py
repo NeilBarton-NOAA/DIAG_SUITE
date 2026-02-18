@@ -70,7 +70,7 @@ for f in files:
             del DAT
         ds_model = ds_model.drop_vars('ULON', errors='ignore')
         ds_model = ds_model.drop_vars('ULAT', errors='ignore')
-        encoding = { var: {"zlib": True, "complevel": 9} for var in ds_model.data_vars }
+        encoding = { var: {"zlib": True, "complevel": 6} for var in ds_model.data_vars }
         f_temp = f_out + '_temp'
         ds_model.to_netcdf(f_temp, format="NETCDF4", encoding=encoding)
         shutil.move(f_temp, f_out)

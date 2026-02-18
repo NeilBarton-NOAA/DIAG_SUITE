@@ -15,14 +15,8 @@ os.makedirs(output_dir, exist_ok = True)
 
 ########################
 # interpolate onto CICE grid
-mask_file = output_dir + '/CICE_mx025.nc'
+mask_file = os.path.dirname(os.path.abspath(__file__)) + '/CICE_mx025.nc'
 print(mask_file)
-if not os.path.exists(mask_file):
-    print('mask file not found, wget from github')
-    raw_url='https://raw.githubusercontent.com/NeilBarton-NOAA/DIAG_SUITE/main/SCRIPTS/GRAB_OBS/' + os.path.basename(mask_file)
-    response = requests.get(raw_url)
-    with open(mask_file, 'wb') as f:
-        f.write(response.content)
 CICE_GRID = xr.open_dataset(mask_file)
 CICE_GRID = CICE_GRID.rename({'TLAT': 'lat', 'TLON': 'lon'})
 CICE_GRID['mask'] = (CICE_GRID['tmask'].dims, CICE_GRID['tmask'].values)

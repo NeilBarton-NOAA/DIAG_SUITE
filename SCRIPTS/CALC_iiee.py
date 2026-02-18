@@ -128,7 +128,7 @@ if not os.path.exists(output_file) or npb.utils.FORCE_CALC():
         if v != 'diff' and v[0:4] == 'diff':
             ds_time[v] = ds_time[v].sel(pole = v[4:6])
     ds_time.attrs['experiment_name'] = EXP
-    default_compression = {"zlib": True, "complevel": 9}
+    default_compression = {"zlib": True, "complevel": 6}
     compress_encoding = {var_name: default_compression for var_name in ds_time.data_vars}
     ds_time.to_netcdf(output_file)
     print("WROTE:", output_file)

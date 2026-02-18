@@ -34,7 +34,7 @@ SUBMIT="${BATCH_SYSTEM}
     --time=${WALLTIME} 
     --account=${HPC_ACCOUNT} 
     --ntasks=1 
-    --mem=0 
+    --mem=100G 
     ${SUBMIT_SUFFIX}"
 SUBMIT_HPSS="${SUBMIT} ${SUBMIT_HPSS_SUFFIX}"
 

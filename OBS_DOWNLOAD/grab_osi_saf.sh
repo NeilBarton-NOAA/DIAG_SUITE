@@ -3,6 +3,9 @@ set -xu
 DTG=${1}
 END_DTG=$(date -d "${2} + 48 day" +%Y%m%d)
 
+#BASE_URL="https://thredds.met.no/thredds/fileServer/osisaf/met.no/reprocessed/ice/conc_cra_files"
+#/scratch3/NCEPDEV/climate/Xiao.Luo/project/SFS_Philip/DIAG_SUITE/OBS_DOWNLOAD/grab_osi_saf.sh
+
 DES=${TOPDIR_OBS}/ice_concentration/osi_saf
 
 mkdir -p ${DES} && cd ${DES}
