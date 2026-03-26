@@ -3,7 +3,8 @@
 # Local Directoriesi and 'global' variables
 machine=$(uname -n)
 JOB_NAME=${JOB_NAME:-hpss}
-WALLTIME=${WALLTIME:-01:00:00}
+WALLTIME=${WALLTIME:-00:30:00}
+HPC_ACCOUNT=${COMPUTE_ACCOUNT:-'marine-cpu'}
 
 BATCH_SYSTEM="sbatch"
 SUBMIT_SUFFIX=""
@@ -15,6 +16,7 @@ elif [[ ${machine} == hercules* ]]; then
     machine=hercules
     export WORK_DIR=/work/noaa/marine
 elif [[ ${machine} == gaea* || ${machine} == dtn* || ${machine} == c6* ]]; then
+    HPC_ACCOUNT=${COMPUTE_ACCOUNT:-'sfs-cpu'}
     machine=gaea
     export WORK_DIR=/gpfs/f6/sfs-emc/scratch
     SUBMIT_SUFFIX="--qos=normal --clusters=c6 --partition=batch"
@@ -22,6 +24,7 @@ elif [[ ${machine} == gaea* || ${machine} == dtn* || ${machine} == c6* ]]; then
 elif [[ ${machine} == u* ]]; then
     machine=ursa
     export WORK_DIR=/scratch4/NCEPDEV/stmp
+    SUBMIT_SUFFIX="--qos ${QOS:-batch}"
     SUBMIT_HPSS_SUFFIX="--partition=u1-service"
 else
     echo 'FATAL: MACHINE UNKNOWN'
@@ -47,5 +50,4 @@ mkdir -p ${DIAG_DIR}/logs
 export TOPDIR_OBS=${WORK_DIR}/${USER}/DIAG/OBS
 export TOPDIR_OUTPUT=${WORK_DIR}/${USER}/DIAG
 export TOPDIR_FIGURES=${WORK_DIR}/${USER}/FIGURES
-
-
+export pydiag_tools=${DIAG_DIR:-$PWD/../}/SCRIPTS

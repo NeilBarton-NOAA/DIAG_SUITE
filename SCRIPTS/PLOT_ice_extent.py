@@ -4,157 +4,131 @@
 #   compare REPLAY data sets
 #   https://docs.xarray.dev/en/stable/user-guide/plotting.html
 ########################
-import argparse
-import calendar
+import argparse, calendar, os, sys
+import glob as glob
 import numpy as np
-import os
-import sys
+from pathlib import Path
 import pandas as pd
 import xarray as xr
-path = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(os.getenv("PYTHON_TOOLS")) if 'slurm' in path else sys.path.append(path)
-import PYTHON_TOOLS as npb
+import holoviews as hv
+from holoviews.plotting.util import process_cmap
+from holoviews import opts
+p = os.getenv("pydiag_tools", os.path.dirname(os.path.realpath(__file__)))
+if p not in sys.path: sys.path.insert(0, p)
+import pydiag_tools as diag_tools
 
-parser = argparse.ArgumentParser( description = "Plot Ice Extent between Runs and Observations")
-parser.add_argument('-f', '--files', action = 'store', nargs = '+', \
-        help="ice extent files")
-parser.add_argument('-obs', '--obs', action = 'store', nargs = '+', \
-        help="observations to use")
-parser.add_argument('-fd', '--figuredir', action = 'store', nargs = 1, \
-        help="directory of figures")
-args = parser.parse_args()
-files = args.files
-obs = args.obs
-save_dir = args.figuredir[0]
-var = 'aice'
-poles = ['NH', 'SH']
-os.makedirs(save_dir, exist_ok=True)
-####################################
-# grab ice extent from models
-DATS, exps = [], []
-for f in files:
-    print(f)
-    D = xr.open_dataset(f)
-    exp = D.attrs['experiment_name'] 
-    exps.append(exp)
-    DATS.append(D.expand_dims({"name" : [exp]}))
+def select_extent(ds):
+    return ds[['extent']]
 
-MODEL = xr.concat(DATS, dim = 'name')
-dtgs = MODEL['time'].dt.strftime('%Y%m%d').values.tolist()
-npb.iceobs.extent.dtgs = dtgs
+def main():
+    parser = argparse.ArgumentParser( description = "Plot Ice Extent between Runs and Observations")
+    parser.add_argument('-e', '--experiments_dir', action = 'store', nargs = '+', \
+        help="directories of the experiments")
+    parser.add_argument('-y', '--yaml', action = 'store', nargs = 1, \
+        help="yaml file")
+    args = parser.parse_args()
+    exp_dirs = args.experiments_dir
+    config = diag_tools.utils.load_yaml(args.yaml[0])
+    save_dir = config['save_dir']
+    poles = ['NH', 'SH']
 
-####################################
-# grab ice extent observations
-DATS = []
-grid = '10km'
-#grid = '25km'
-#grid = 'tripole'
-analysis = False
-for ob in obs:
-    print(  'obs:', ob)
-    if ob == 'analysis':
+    ####################################
+    # grab ice extent from models
+    DATS, exps = [], []
+    for e in exp_dirs:
+        files = glob.glob(e + '/ice*nc')
+        ds = xr.open_mfdataset(files, preprocess=select_extent)
+        exp = Path(e).name
+        exps.append(exp)
+        DATS.append(ds.expand_dims({"name" : [exp]}))
+
+    MODEL = xr.concat(DATS, dim = 'name')
+    if config['plot']['analysis'] and MODEL['time'].size < MODEL['forecast_hour'].size:
+        print("config['plot']['analysis'] will be set to False")
+        config['plot']['analysis'] = False
+
+    ####################################
+    # grab ice extent observations
+    diag_tools.iceobs.dtgs = diag_tools.utils.all_dtgs(ds) 
+    DATS = []
+    if config['plot']['analysis']:
+        print('using analsyis')
         D = MODEL.isel(forecast_hour = 0)
         D = D.drop_vars('forecast_hour')
-        D = D.sel(grid = grid)
         D = D.squeeze()
-        analysis = True
-    else:
-        file_extent = ob + '/ice_extent_' + dtgs[0] + '_to_' + dtgs[-1] + '.nc'
-        npb.iceobs.extent.directory = ob
-        D = npb.iceobs.extent.grab()
+        D = D.expand_dims({'name': ['analysis']})
+        DATS.append(D)
+        
+    for ob in config['observations']['sic']:
+        print('obs:', ob)
+        diag_tools.iceobs.directory = ob
+        D = diag_tools.iceobs.extent.grab()
+        D = D.expand_dims({'name': [Path(ob).stem]})
+        DATS.append(D)
+    
+    OBS = xr.concat(DATS, dim = 'name')
 
-        print(file_extent)
-        npb.utils.stop() 
-        npb.iceobs.sic.directory = ob
-        POLE = []
-        for p in poles:
-            print(p)
-            npb.iceobs.sic.pole = p
-            npb.icecalc.extent.ds = npb.iceobs.sic.grab()
-            dat = npb.icecalc.extent.calc()
-            POLE.append(dat.expand_dims({"pole" : [p]}))
-        POLE = xr.concat(POLE, dim = 'pole')
-        print(POLE)
-        #POLE.to_netcdf(obs_name)
-        npb.utils.stop() 
-        #if 'hemisphere' in D.dims:
-        #    D = D.rename({'hemisphere': 'pole'})
-    if 'name' not in D.dims:
-        D = D.expand_dims({"name" : [ob]})
-    DATS.append(D)
-OBS = xr.concat(DATS, dim = 'name')
-####################################
-# if analysis, need to reduce time
-if analysis:
-    end_date = MODEL['time'][-1].values + pd.Timedelta(hours = int(MODEL['forecast_hour'][-1].values))
-    MODEL = MODEL.sel(time=slice(None, end_date))
+    ####################################
+    ## if analysis, need to reduce time
+    if config['plot']['analysis']:
+        end_date = MODEL['time'][-1].values + pd.Timedelta(hours = int(MODEL['forecast_hour'][-1].values))
+        MODEL = MODEL.sel(time=slice(None, end_date))
 
-####################################
-# Give OBS forecast hours dimension
-OBS = npb.utils.add_forecast_hour(OBS, MODEL['forecast_hour'][-1].values)
-OBS = OBS.dropna(dim='time', how='any', subset=list(OBS))
-new_names = ['analysis ' + n if n in exps else n for n in OBS['name'].values]
-OBS['name'] = new_names
+    ####################################
+    # Give OBS forecast hours dimension
+    OBS = diag_tools.utils.add_forecast_hour(OBS, MODEL['forecast_hour'][-1].values)
+    OBS = OBS.dropna(dim='time', how='any', subset=list(OBS))
+    new_names = ['analysis ' + n if n in exps else n for n in OBS['name'].values]
+    OBS['name'] = new_names
 
-####################################
-# grab only model output for same grid as obs
-MODEL = MODEL.sel(grid = grid)
-common_times = np.intersect1d(MODEL.time.values, OBS.time.values)
-OBS = OBS.sel(time = common_times)
-MODEL = MODEL.sel(time = common_times)
+    ####################################
+    # grab only model output for same grid as obs
+    common_times = np.intersect1d(MODEL.time.values, OBS.time.values)
+    OBS = OBS.sel(time = common_times)
+    MODEL = MODEL.sel(time = common_times)
+    ds = xr.concat([MODEL, OBS], dim = 'name', data_vars = 'all', join='inner')
+    
+    ####################################
+    # edit color map and ds for hv plots
+    ds['forecast_day'] = ds['forecast_hour'] / 24.0
+    ds = ds.swap_dims({'forecast_hour': 'forecast_day'})
+    ds = ds.drop_vars('forecast_hour')
+    #ds = ds.compute()
+    
+    names = ds.name.values
+    palette = process_cmap('Category10', ncolors=(len(names)))
+    color_map = [('black' if name in list(OBS.name.values) else palette[i]) for i, name in enumerate(ds.name.values)]
+    
+    hv.extension('bokeh')
+    hv_ds = hv.Dataset(ds,
+        kdims=['name', 'pole', 'time', 'forecast_day'], 
+        vdims=['extent']
+    )
+    explorer = hv_ds.to(
+        hv.Curve,
+        kdims=['forecast_day'],
+        vdims=['extent'],
+        groupby=['name','pole', 'time']).overlay('name')
 
-####################################
-# plot month and sea ice exten
-times = MODEL['time']
-npb.plot.ice_extent.save_dir = save_dir
-npb.plot.ice_extent.MODEL = MODEL
-npb.plot.ice_extent.OBS = OBS
-for pole in poles:
-    npb.plot.ice_extent.pole = pole
-    npb.plot.ice_extent.times = times 
-    npb.plot.ice_extent.title = 'All Times'
-    npb.plot.ice_extent.create()
-    # plot for each time
-    if (len(times) < 100):
-        for t in times:
-            npb.plot.ice_extent.times = t
-            npb.plot.ice_extent.title = np.datetime_as_string(t, timezone='UTC')[0:10]
-            npb.plot.ice_extent.create()
-    # plot by month
-    months = np.unique(MODEL['time'].sel(time = times).dt.month)
-    for m in months:
-        m_times = times.isel(time = times.dt.month.isin([m]))
-        npb.plot.ice_extent.times = m_times 
-        npb.plot.ice_extent.title = calendar.month_abbr[m].upper() 
-        npb.plot.ice_extent.create() 
-    # plot winter and summer cases
-    m_times = times.isel(time = times.dt.month.isin([1,2,12]))
-    if m_times.size > 5:
-        npb.plot.ice_extent.times = m_times 
-        npb.plot.ice_extent.title = 'DJF' 
-        npb.plot.ice_extent.create() 
-    m_times = times.isel(time = times.dt.month.isin([6,7,8]))
-    if m_times.size > 5:
-        npb.plot.ice_extent.times = m_times 
-        npb.plot.ice_extent.title = 'JJA' 
-        npb.plot.ice_extent.create() 
-
-############
-# plot monthly per tau bias heat plots
-if len(np.unique(times.dt.month)) == 12:
-    for i, d in enumerate(MODEL):
-        d.attrs['save_dir'] = save_dir
-        for obs in OBS:
-            d.attrs['DMIN'], d.attrs['DMAX'] = -2.0, 2.0
-            npb.plot.monthdiff_imshow(d, obs, var = 'extent', pole = 'north')
-            d.attrs['DMIN'], d.attrs['DMAX'] = -6.0, 6.0
-            npb.plot.monthdiff_imshow(d, obs, var = 'extent', pole = 'south')
-        if i > 0:
-            d.attrs['DMIN'], d.attrs['DMAX'] = -0.5, 0.5
-            npb.plot.monthdiff_imshow(d, DAT[i-1], var = 'extent', pole = 'north')
-            d.attrs['DMIN'], d.attrs['DMAX'] = -0.5, 0.5
-            npb.plot.monthdiff_imshow(d, DAT[i-1], var = 'extent', pole = 'south')
-
-debug = npb.utils.debug(True)
-print('PLOT_ice_extent.py SUCCESSFUL')
+    # 4. Apply styling and tooltips
+    explorer.opts(
+        opts.Curve(
+            width=700, height=400,
+            show_grid=True,
+            tools=['hover'],
+            color=hv.Cycle(values=color_map),
+            line_width=2
+        ),
+        opts.Overlay(
+        title="Ice Extent Comparison",
+        legend_position='right',
+        legend_labels="",
+        click_policy='hide' # Clicking a name in the legend hides its line
+        )
+    )
+    hv.save(explorer, save_dir + '/ice_extent_explorer.html', fmt='html', resources='inline')
+    print('SAVED hv plot')
+    
+if __name__ == "__main__":
+    main()
 

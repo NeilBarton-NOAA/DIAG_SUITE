@@ -1,0 +1,23 @@
+variables:
+  ice: ["aice", "hi", "hs", "Tsfc", "albsni", "meltt", "meltb"]
+
+parse:
+  interpolate: 
+    perform: True
+    grid_files: ["${DIAG_DIR}/GRIDS/NH10km.nc", "${DIAG_DIR}/GRIDS/SH10km.nc"]
+
+observations:
+  sic: ['/scratch4/NCEPDEV/stmp/Neil.Barton/DIAG/OBS/ice_concentration/osi_saf']
+
+plot:
+  analysis: True
+
+maps:
+  forecast_days: [0,4,8,12,16]
+  interpolation_grid: 0.25
+  contour_sic_analysis: True
+  
+delete_files: False
+
+save_dir: ${TOPDIR_FIGURES}
+

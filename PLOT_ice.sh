@@ -1,26 +1,20 @@
 #!/bin/sh
 set -u
-EXPS="${@}"
+EXPS='RETROV17'
 BACKGROUND_JOB=T
-export DEBUG_DIAG=F
-source ${PWD}/experiment_options.sh DUMMY ice 
+export DIAG_DIR=${PWD}
 source ${PWD}/MACHINE/config.sh
-
-############
-# model files
-files=""
-for EXP in ${EXPS}; do
-    files=${files}$(ls ${TOPDIR_OUTPUT}/${EXP}/ice_extent_${EXP}.nc)" "
+YAML=${DIAG_DIR}/YAMLS/eval.yaml
+exp_dirs=""
+for e in ${EXPS}; do
+    exp_dirs="${exp_dirs}${TOPDIR_OUTPUT}/${e} "
 done
-
+echo $exp_dirs
 ############
 # ice_extent
 JOB_NAME=PLOT.${EXPS}.ICE_EXTENT
 source ${DIAG_DIR}/MACHINE/config.sh
-${SUBMIT} ${DIAG_DIR}/SCRIPTS/PLOT_ice_extent.py -f ${files} -fd ${TOPDIR_FIGURES} \
-            -obs ${TOPDIR_OBS}/ice_concentration/amsr2 analysis \
-#            -obs analysis \
-#            -obs ${TOPDIR_OBS}/ice_concentration/amsr2 ${TOPDIR_OBS}/ice_concentration/climatology persistance analysis \
+${SUBMIT} ${DIAG_DIR}/SCRIPTS/PLOT_ice_extent.py -e ${exp_dirs} -y ${YAML}
 
 exit 1
 ###########
