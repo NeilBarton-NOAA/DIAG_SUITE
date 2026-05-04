@@ -10,12 +10,19 @@ EXPDIR=${TOPDIR_OUTPUT}/${EXP} && mkdir -p ${EXPDIR} && cd ${EXPDIR}
 # options for experiments
 case ${EXP} in 
     'RETROV17')    
-        HPSS_DIR='/5year/NCEPDEV/emc-global/emc.glopara/*/GFSv17/retrov17*'
+        HPSS_DIR='/5year/NCEPDEV/emc-global/emc.glopara/*/GFSv17/retrov17*/*00'
         RUN='gfs'
         ice_hpss_file='ice_6hravg.tar'
         ocn_hpss_file='ocean_6hravg.tar'
         ;;
-* ) echo 'FATAL: case unknowned ' && exit 1
+    'RTOFS')    
+        HPSS_DIR='/NCEPPROD/1year/hpssprod/runhistory/rh*/*/*'
+        RUN='rtofs'
+        ice_hpss_file='com_rtofs_v2.5_rtofs.*.nc.tar'
+        ocn_hpss_file='ocean_6hravg.tar'
+        ;;
+    * ) 
+        echo 'FATAL: case unknowned ' && exit 1
 esac
 [[ ${MODEL} == 'ice' ]] && HPSS_FILE=${ice_hpss_file}
 [[ ${MODEL} == 'ocn' ]] && HPSS_FILE=${ocn_hpss_file}
@@ -36,11 +43,17 @@ echo ${CORRECT}
 
 ########################
 # get all tar files that are available 
-files=$( hsi -q find ${HPSS_DIR}/*00 -name ${HPSS_FILE} 2>&1 | grep NCEPDEV )
+files=$( hsi -q find ${HPSS_DIR}/ -name ${HPSS_FILE} 2>&1 | grep NCEP )
 i=0
 for f in ${files}; do
+    echo $f
     dtg=$( echo "${f}" | awk -F'/' '{print $(NF-1)}' )
-    local_dir=${TOPDIR_OUTPUT}/${EXP}/${RUN}.${dtg:0:8}/${dtg:8:10}/model/${MODEL}/history   
+    if [[ ${RUN} == 'rtofs' ]]; then
+        local_dir=${TOPDIR_OUTPUT}/${EXP}/${dtg}
+        mkdir -p ${local_dir} && cd ${local_dir}
+    else
+        local_dir=${TOPDIR_OUTPUT}/${EXP}/${RUN}.${dtg:0:8}/${dtg:8:10}/model/${MODEL}/history   
+    fi
     FILES_PRESENT=$( correct_n_files "${local_dir}")
     f_out=${TOPDIR_OUTPUT}/${EXP}/${MODEL}_${dtg}.nc
     if [[ ${FILES_PRESENT} == F && ! -f ${f_out} ]]; then

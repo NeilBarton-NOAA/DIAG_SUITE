@@ -11,9 +11,10 @@ observations:
 
 plot:
   analysis: True
+  time_slice_int: 8
 
 maps:
-  forecast_days: [0,4,8,12,16]
+  forecast_days: [0,2,8,16]
   interpolation_grid: 0.25
   contour_sic_analysis: True
   

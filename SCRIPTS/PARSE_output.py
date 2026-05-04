@@ -37,21 +37,28 @@ def main():
     ########################
     # CICE has an IC file under a name
     files.sort()
-    f_ic = next(f for f in files if ".ic.nc" in f)
-    files.remove(f_ic)
-    ic_ds = xr.open_dataset(f_ic)[var]
+    if 'rtofs' in files[0]:
+        RTOFS = True
+    else:
+        f_ic = next(f for f in files if ".ic.nc" in f)
+        files.remove(f_ic)
+        ic_ds = xr.open_dataset(f_ic)[var]
+        RTOFS = False
 
     ########################
     # open files
     print('OPENING FILES')
-    ds = xr.open_mfdataset(files, coords='minimal', compat='override', parallel=True, data_vars='all')
-    # remove suffixes from variable names
-    rename_map = {name: name[:-2] for name in ds.variables if name.endswith('_h') or name.endswith('_d')}
-    ds = ds.rename(rename_map)
-    ds = ds[var]
-    # combine IC ds and forecast ds
-    ds = xr.concat([ic_ds,ds], dim='time')
-    
+    if RTOFS:
+        ds = xr.open_mfdataset(files)
+    else:
+        ds = xr.open_mfdataset(files, coords='minimal', compat='override', parallel=True, data_vars='all')
+        # remove suffixes from variable names
+        rename_map = {name: name[:-2] for name in ds.variables if name.endswith('_h') or name.endswith('_d')}
+        ds = ds.rename(rename_map)
+        ds = ds[var]
+        # combine IC ds and forecast ds
+        ds = xr.concat([ic_ds,ds], dim='time')
+
     ########################
     # Change Time Dimension to forecast time
     print('ADDING FORECAST TIME to DataSet')
@@ -59,7 +66,7 @@ def main():
     if ds['time_start'].dt.hour not in [0,6,12,18]:
         t = ds['time'].values[0] + np.timedelta64(3,'h') 
     else:
-        t = ds['time_start'].values[0]
+        t= ds['time'].values[0]
     ds = ds.rename({'time': 'forecast_hour'})
     ds = ds.expand_dims({'time': [np.datetime64(t)]}, axis = 0)
     ds['forecast_time'] = ds['forecast_hour']

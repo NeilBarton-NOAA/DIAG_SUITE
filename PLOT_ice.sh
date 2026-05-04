@@ -1,6 +1,7 @@
 #!/bin/sh
 set -u
 EXPS='RETROV17'
+WALLTIME="04:00:00"
 BACKGROUND_JOB=T
 export DIAG_DIR=${PWD}
 source ${PWD}/MACHINE/config.sh

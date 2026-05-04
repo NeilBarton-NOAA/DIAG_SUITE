@@ -12,7 +12,7 @@ done
 echo $exp_dirs
 ############
 # ice_extent
-JOB_NAME=PLOT.${EXPS}.ICE_EXTENT
+JOB_NAME=MAPS.${EXPS}.CICE
 source ${DIAG_DIR}/MACHINE/config.sh
 ${SUBMIT} ${DIAG_DIR}/SCRIPTS/MAPS_cice.py -e ${exp_dirs} -y ${YAML}
 

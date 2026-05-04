@@ -1,11 +1,12 @@
 #!/bin/bash
 set -u
 DTG=${1}
-END_DTG=$(date -d "${2} + 48 day" +%Y%m%d)
+END_DTG=$(date -d "${2} + 16 day" +%Y%m%d)
 DES=${TOPDIR_OBS}/ice_concentration/osi_saf
 
 mkdir -p ${DES} && cd ${DES}
 while [[ ${DTG} -le ${END_DTG} ]]; do
+    echo ${DTG}
     Y=${DTG:0:4}
     M=${DTG:4:2}
     D=${DTG:6:2}

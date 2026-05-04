@@ -24,11 +24,55 @@ import pydiag_tools as diag_tools
 gv.extension('bokeh')
 
 ####################################
-def get_preprocessor(vars_to_keep, forecast_hours):
+def get_preprocessor(vars_to_keep, forecast_hours, time_slice = None):
     def inner_preprocess(ds):
-        return ds[vars_to_keep].sel(forecast_hour = forecast_hours, method = "nearest")
+        ds = ds[vars_to_keep].sel(forecast_hour = forecast_hours, method = "nearest")
+        if time_slice:
+            ds = ds.isel(time = (slice(0,None,time_slice)))
+        return ds
     return inner_preprocess
 
+def hv_map(ds, v):
+    anal_ds = gv.Dataset(ds_analysis.sel(name = n.values), kdims=anal_dims, vdims=['aice'])
+    anal_mesh = anal_ds.to(gv.QuadMesh, ['lon', 'lat'], 'aice', ['time', 'forecast_day'])
+    ds_var = ds[v].sel(name=n).where(ds['aice'].sel(name=n) != 0 , drop = False)
+    if v == 'aice':
+        v_min, v_max = float(0.0), float(1.0)
+    elif v == 'albsni':
+        v_min, v_max = float(0.0), float(100.0)
+    else:
+        v_min, v_max = float(ds_var.min().values), float(ds_var.max().values)       
+    all_dims = list(ds_var.dims)
+    gv_ds = gv.Dataset(ds_var, kdims=all_dims, vdims=[v])
+    mesh = gv_ds.to(gv.QuadMesh, ['lon','lat'], v, ['time', 'forecast_day'])
+    for p in ['NH', 'SH']:
+        label = str(ds.time.dt.year.values[0]) + '-' + str(ds.time.dt.month.values[0]).zfill(2)
+        f_name = save_dir + '/' + label + '_' + str(n.values) + '_' + p + '_' + v + '.html'
+        f = Path(f_name)
+        if not f.is_file():
+            print(n.values,v,p)
+            grid_lines = gv.project(gv.feature.grid(), projection=p_options[p]['crs']).opts(
+                                    line_color='gray', line_dash='dotted', line_width=2)
+            projected = rasterize(gv.project(mesh, projection=p_options[p]['crs']))
+            plot = projected.opts(gv.opts.Image(
+                               projection=p_options[p]['crs'], 
+                               cmap='viridis', colorbar=True,
+                               width=700, height=650,
+                               clim=(v_min, v_max),
+                               tools=['hover'],
+                               xlim=p_options[p]['x'],ylim=p_options[p]['y'],
+                               global_extent=False,framewise=True)
+                              ) * gf.coastline() * grid_lines
+            if config['maps']['contour_sic_analysis']:
+                anal_mesh = gv.project(anal_mesh, projection=p_options[p]['crs'])
+                contours = hv_contours(anal_mesh, levels = [0.15]).opts(
+                                   gv.opts.Contours(line_color='darkgrey',cmap=['darkgrey'],
+                                   line_width=3.0,show_legend=False))
+            plot = plot *contours
+            print('SAVING ', f_name)
+            hv.save(plot, f_name, fmt='html', resources='inline')
+        else:
+            print('Already Saved', f_name)
 ####################################
 def main():
     ########################
@@ -83,18 +127,6 @@ def main():
     DES = DES.assign_attrs({'grid' : str(res) + 'degree' }) 
     ds = diag_tools.utils.interp(ds, DES, extrap_method = None) #, var = var)
     
-    #dat = ds['hi'][0,0,0]
-    ##dat = ds['tmask'][0]
-    ##dat = DES['mask']
-    #print(dat)
-    #fig = plt.figure(figsize=(10, 8))
-    #ax = plt.axes(projection=crs.NorthPolarStereo()); ax.set_extent([-180,180,50,90], crs.PlateCarree())
-    ##ax = plt.axes(projection=crs.SouthPolarStereo()); ax.set_extent([-180,180,-50,-90], crs.PlateCarree())
-    ##ax.gridlines()
-    #ax.add_feature(cfeature.COASTLINE)
-    #dat.plot(ax=ax, transform=crs.PlateCarree())
-    #plt.show(); exit(1)
-
     ########################
     # create analysis
     if config['maps']['contour_sic_analysis']:
@@ -107,44 +139,11 @@ def main():
     p_options = {
         "NH": {"crs": crs.NorthPolarStereo(), "x": (-4000000, 4000000), "y": (-4000000, 4000000)},
         "SH": {"crs": crs.SouthPolarStereo(), "x": (-4000000, 4000000), "y" : (-4000000, 4000000)}}   
-    for n in ds.name:
-        anal_ds = gv.Dataset(ds_analysis.sel(name = n.values), kdims=anal_dims, vdims=['aice'])
-        anal_mesh = anal_ds.to(gv.QuadMesh, ['lon', 'lat'], 'aice', ['time', 'forecast_day'])
-        for v in config['variables']['ice']:
-            ds_var = ds[v].sel(name=n).where(ds['aice'].sel(name=n) != 0 , drop = False)
-            if v == 'aice':
-                v_min, v_max = float(0.0), float(1.0)
-            elif v == 'albsni':
-                v_min, v_max = float(0.0), float(100.0)
-            else:
-                v_min, v_max = float(ds_var.min().values), float(ds_var.max().values)
-                
-            all_dims = list(ds_var.dims)
-            gv_ds = gv.Dataset(ds_var, kdims=all_dims, vdims=[v])
-            mesh = gv_ds.to(gv.QuadMesh, ['lon','lat'], v, ['time', 'forecast_day'])
-            for p in ['NH', 'SH']:
-                print(n.values,v,p)
-                grid_lines = gv.project(gv.feature.grid(), projection=p_options[p]['crs']).opts(
-                            line_color='gray', line_dash='dotted', line_width=2)
-                projected = rasterize(gv.project(mesh, projection=p_options[p]['crs']))
-                plot = projected.opts(  gv.opts.Image(
-                                        projection=p_options[p]['crs'], 
-                                        cmap='viridis', colorbar=True,
-                                        width=700, height=650,
-                                        clim=(v_min, v_max),
-                                        tools=['hover'],
-                                        xlim=p_options[p]['x'],ylim=p_options[p]['y'],
-                                        global_extent=False,framewise=True)
-                                     ) * gf.coastline() * grid_lines
-                if config['maps']['contour_sic_analysis']:
-                    anal_mesh = gv.project(anal_mesh, projection=p_options[p]['crs'])
-                    contours = hv_contours(anal_mesh, levels = [0.15]).opts(
-                                        gv.opts.Contours(line_color='darkgrey',cmap=['darkgrey'],
-                                                        line_width=3.0,show_legend=False))
-                    plot = plot *contours
-                f_name = save_dir + '/' + str(n.values) + '_' + p + '_' + v + '.html'
-                print('SAVING ', f_name)
-                hv.save(plot, f_name, fmt='html', resources='inline')
+    for label, ds_group in ds.groupby(ds.time.dt.strftime("%Y-%m")):
+        print(label)
+        for n in ds.name:
+            for v in config['variables']['ice']:
+                hv_map(ds, v) 
          
 if __name__ == "__main__":
     main()

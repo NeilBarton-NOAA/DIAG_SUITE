@@ -1,8 +1,9 @@
 import glob, os, sys
-import numpy as np
 import xarray as xr
+import matplotlib.pyplot as plt
 import pandas as pd
-from datetime import datetime
+import numpy as np
+import re
 from . import icecalc, utils
 
 # global variables
@@ -74,19 +75,25 @@ def osi_saf(directory, pole, dtgs):
         f = []
         for d in dtgs: 
             fs = glob.glob(directory + '/*' + pole.lower() + '*' + d + '*.nc')
-            f.append(fs[0])
+            if len(fs) > 0:
+                f.append(fs[0])
     if len(f) == 0:
         print('FATAL: iceobs.sic.grab(), No files found:', file_search)
         exit(1)
-    ds = xr.open_mfdataset(f, data_vars='all')
+    ds_folder = []
+    for ff in f:
+        ds = xr.open_dataset(ff)
+        ds['ice_con'] = (ds['ice_conc'].dims, ds['ice_conc'].values / 100.0)
+        vars_keep = set(['ice_con', 'land_mask', 'lat', 'lon', 'time'])
+        vars_to_drop = [key for key in ds.data_vars if key not in vars_keep]
+        ds_folder.append(ds.drop_vars(vars_to_drop))
+    ds = xr.concat(ds_folder, dim = 'time')
     ds['time'] = ds['time'] - np.timedelta64(12, 'h')
     grid_area = int(abs(ds['xc'][1] - ds['xc'][0]))
-    ds['ice_con'] = (ds['ice_conc'].dims, ds['ice_conc'].values / 100.0)
     land_mask = ds['ice_con'][0]
     land_mask = land_mask.where(land_mask.isnull(), 1, drop=False)
     land_mask = land_mask.fillna(0)
     ds['land_mask'] = (land_mask.dims, land_mask.values)    
-    ds['ice_con'] = ds['ice_con'].where(land_mask == 1, drop = False)
     ds = ds.assign_attrs({'grid' : pole + str(grid_area)})
     ds = ds.assign_attrs({'pole': pole})
     ds = ds.assign_attrs({'name': 'osi_saf'})
