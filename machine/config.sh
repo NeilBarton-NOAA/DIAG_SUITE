@@ -30,6 +30,7 @@ else
     echo 'FATAL: MACHINE UNKNOWN'
     exit 1
 fi
+
 SUBMIT="${BATCH_SYSTEM} 
     --job-name=${JOB_NAME} 
     --output=${DIAG_DIR}/logs/${JOB_NAME}.out

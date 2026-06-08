@@ -6,8 +6,30 @@ BACKGROUND_JOB=F
 DIAG_DIR=${PWD}
 source ${DIAG_DIR}/MACHINE/config.sh 
 EXPDIR=${TOPDIR_OUTPUT}/${EXP} && mkdir -p ${EXPDIR} && cd ${EXPDIR}
+
 ########################
+# get all tar files that are available 
+main(){
+exp_options
+files=$( hsi -q find ${HPSS_DIR}/ -name ${HPSS_FILE} 2>&1 | grep NCEP )
+i=0
+for f in ${files}; do
+    dtg=$( echo "${f}" | awk -F'/' '{print $(NF-1)}' )
+    FILES_PRESENT=$( correct_n_files "${local_dir}")
+    f_out=${TOPDIR_OUTPUT}/${EXP}/${MODEL}_${dtg}.nc
+    if [[ ${FILES_PRESENT} == F && ! -f ${f_out} ]]; then
+        echo "  downloading ${f}"
+        JOB_NAME=GET.${EXP}.$(basename ${f%.tar}).${dtg}
+        source ${DIAG_DIR}/MACHINE/config.sh
+        ${SUBMIT_HPSS} htar -xvf ${f}
+        [[ ${?} > 0 ]] && echo "FATAL with SUBMIT_HPSS" && exit 1
+    fi
+done
+}
+
+################################################
 # options for experiments
+exp_options(){
 case ${EXP} in 
     'RETROV17')    
         HPSS_DIR='/5year/NCEPDEV/emc-global/emc.glopara/*/GFSv17/retrov17*/*00'
@@ -26,8 +48,9 @@ case ${EXP} in
 esac
 [[ ${MODEL} == 'ice' ]] && HPSS_FILE=${ice_hpss_file}
 [[ ${MODEL} == 'ocn' ]] && HPSS_FILE=${ocn_hpss_file}
+}
 
-########################
+################################################
 # check the number of files downloaded as there code have been an issue
 correct_n_files () {
 dir=${1}
@@ -41,28 +64,4 @@ fi
 echo ${CORRECT}
 }
 
-########################
-# get all tar files that are available 
-files=$( hsi -q find ${HPSS_DIR}/ -name ${HPSS_FILE} 2>&1 | grep NCEP )
-i=0
-for f in ${files}; do
-    echo $f
-    dtg=$( echo "${f}" | awk -F'/' '{print $(NF-1)}' )
-    if [[ ${RUN} == 'rtofs' ]]; then
-        local_dir=${TOPDIR_OUTPUT}/${EXP}/${dtg}
-        mkdir -p ${local_dir} && cd ${local_dir}
-    else
-        local_dir=${TOPDIR_OUTPUT}/${EXP}/${RUN}.${dtg:0:8}/${dtg:8:10}/model/${MODEL}/history   
-    fi
-    FILES_PRESENT=$( correct_n_files "${local_dir}")
-    f_out=${TOPDIR_OUTPUT}/${EXP}/${MODEL}_${dtg}.nc
-    if [[ ${FILES_PRESENT} == F && ! -f ${f_out} ]]; then
-        echo "  downloading ${f}"
-        JOB_NAME=GET.${EXP}.$(basename ${f%.tar}).${dtg}
-        source ${DIAG_DIR}/MACHINE/config.sh
-        ${SUBMIT_HPSS} htar -xvf ${f}
-        [[ ${?} > 0 ]] && echo "FATAL with SUBMIT_HPSS" && exit 1
-        #i=$(( i + 1 ))
-        #(( i > 5 )) && exit 1
-    fi
-done
+main

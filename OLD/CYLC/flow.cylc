@@ -1,0 +1,40 @@
+[scheduling]
+    # Start from midnight today
+    initial cycle point = previous(T00)
+    
+    [[graph]]
+        # Run every 1 day (P1D)
+        # @wall_clock ensures it triggers at the real-world cycle time
+        P1D = """"
+              @wall_clock               => GET_OUTPUT_FROM_HPSS
+              GET_OUTPUT_FROM_HPSS      => GET_OBS & PARSE_OUTPUT
+              GET_OBS & PARSE_OUTPUT    => PLOT_ICE & MAPS_CICE
+              """
+
+[runtime]
+    [[root]] 
+        execution retry delays = 2*PT20M
+        platform = slurm_local
+        init-script = """
+umask 022
+set -xu
+export TOP_DIR=${CYLC_RUN_DIR}/${CYLC_WORKFLOW_NAME}/_cylc-install/source/../
+"""
+        pre-script = """
+source ${TOP_DIR}/modules.sh
+        """
+        [[[environment]]]
+            BACKGROUND_JOB              = T # not really
+        [[[directives]]]
+            --account = marine-cpu
+            --ntasks = 1
+            --time = 01:00:00
+            --mem = 0
+
+    [[check_for_updates]]
+        script = """
+            echo "Checking for updates at $(date)"
+            # Insert your update logic here (e.g., git pull or rsync)
+            # Example:
+            # cd /path/to/repo && git fetch && git status
+        """   
