@@ -34,17 +34,17 @@ def three_panel(ds, DEBUG = False):
     SUFFIX = "_EXPS_" + "_".join(exp_names)
     exp_names.append(exp_names[0] + ' minus ' + exp_names[1])
     loop_files=[]
-    for t in ds.time:
+    for j, t in enumerate(ds.forecast_month):
         fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(18, 5), \
             subplot_kw={'projection': ccrs.Robinson(central_longitude=180)})
         for i, ax in enumerate(axes):
             # Select the data (example: first 3 time steps)
             if i == 2:
-                dat1 = ds.sel(time = t, experiment = exp_names[0]).mean(dim = 'member')
-                dat2 = ds.sel(time = t, experiment = exp_names[1]).mean(dim = 'member')
+                dat1 = ds.sel(forecast_month = t, experiment = exp_names[0]).mean(dim = 'member')
+                dat2 = ds.sel(forecast_month = t, experiment = exp_names[1]).mean(dim = 'member')
                 dat = dat1 - dat2
             else:
-                dat = ds.sel(time = t, experiment = exp_names[i]).mean(dim = 'member')
+                dat = ds.sel(forecast_month = t, experiment = exp_names[i]).mean(dim = 'member')
             # Plot using xarray's built-in plotting (transform is CRITICAL here)
             if ds.name in limits:
                 v_min, v_max = limits[ds.name][i]
@@ -72,16 +72,16 @@ def three_panel(ds, DEBUG = False):
             ax.coastlines()
             ax.add_feature(cfeature.BORDERS, linestyle=':')
             ax.set_global() # Ensures the whole world is shown
-            ax.set_title(str(t.dt.year.values) + '-' + str(t.dt.month.values).zfill(2) + ': ' + exp_names[i])
+            ax.set_title(ds.period_label + ' Month ' + str(ds.y_label[j]) + ': ' + exp_names[i])
         plt.tight_layout()
-        name = ds.name + '_' + str(t.dt.year.values) + '-' + str(t.dt.month.values).zfill(2) + SUFFIX + '.png'
-        loop_files.append(name)
         if DEBUG:
             plt.show(); exit(1)
+        name = ds.name + '_' + ds.period_label + '_MONTH' + str(ds.y_label[j]) + SUFFIX + '.png'
+        loop_files.append(name)
         plt.savefig(name, dpi = 400)
         print("SAVED:", name)
         plt.close()
-    loop_name = ds.name + '_' + pd.to_datetime(ds.time.values[0]).strftime('%Y%m') + SUFFIX + '.gif'
+    loop_name = ds.name + '_' + ds.period_label + SUFFIX + '.gif'
     frames = [iio.imread(img, mode='RGB') for img in loop_files]
     iio.imwrite(loop_name, frames, duration=500, loop=0, dither=0)
     print("SAVED:", loop_name)
@@ -91,7 +91,7 @@ def six_panel(ds, DEBUG = False):
     SUFFIX = "_EXPS_" + "_".join(exp_names)
     exp_names.append(exp_names[0] + ' minus ' + exp_names[1])
     gif_files=[]
-    for t in ds.time:
+    for j, t in enumerate(ds.forecast_month):
         fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(14, 8), gridspec_kw={'height_ratios': [1, 1, 0.04]})
         for ax in axes.flat:
             ax.axis('off')
@@ -112,11 +112,11 @@ def six_panel(ds, DEBUG = False):
                 ax.set_boundary(circle, transform=ax.transAxes)
                 # data
                 if col == 2:
-                    dat1 = ds.sel(time = t, experiment = exp_names[0]).mean(dim = 'member')
-                    dat2 = ds.sel(time = t, experiment = exp_names[1]).mean(dim = 'member')
+                    dat1 = ds.sel(forecast_month = t, experiment = exp_names[0]).mean(dim = 'member')
+                    dat2 = ds.sel(forecast_month = t, experiment = exp_names[1]).mean(dim = 'member')
                     dat = dat1 - dat2
                 else:
-                    dat = ds.sel(time = t, experiment = exp_names[col]).mean(dim = 'member')
+                    dat = ds.sel(forecast_month = t, experiment = exp_names[col]).mean(dim = 'member')
                 # Plot using xarray's built-in plotting (transform is CRITICAL here)
                 if ds.name in limits:
                     v_min, v_max = limits[ds.name][col]
@@ -142,15 +142,15 @@ def six_panel(ds, DEBUG = False):
                 ax.coastlines()
                 ax.add_feature(cfeature.BORDERS, linestyle=':')
                 if row == 0:
-                    ax.set_title(str(t.dt.year.values) + '-' + str(t.dt.month.values).zfill(2) + ': ' + exp_names[col])
+                    ax.set_title(ds.period_label + ' Month' + str(ds.y_label[j]) + ': ' + exp_names[col])
         plt.tight_layout()
-        name = ds.name + '_' + str(t.dt.year.values) + '-' + str(t.dt.month.values).zfill(2) + SUFFIX + '.png'
+        name = ds.name + '_' + ds.period_label + '_MONTH_' + str(ds.y_label[j]) + SUFFIX + '.png'
         gif_files.append(name)
         if DEBUG:
             plt.show(); exit(1)
         plt.savefig(name, dpi = 600)
         print("SAVED:" , name)
-    loop_name = ds.name + '_' + pd.to_datetime(ds.time.values[0]).strftime('%Y%m') + SUFFIX + '.gif'
+    loop_name = ds.name + '_' + ds.period_label + SUFFIX + '.gif'
     frames = [iio.imread(img, mode='RGB') for img in gif_files]
     iio.imwrite(loop_name, frames, duration=500, loop=0, dither=0)
     print("SAVED:", loop_name)

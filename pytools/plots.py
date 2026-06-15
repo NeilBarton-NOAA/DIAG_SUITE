@@ -58,19 +58,19 @@ def line(ds, region = 'globe', obs = False, cell_area = False, DEBUG = False):
         mean = dat.sel(experiment = n).mean(dim = 'member') 
         #lower = dat.sel(experiment = n).min(dim = 'member')
         #upper = dat.sel(experiment = n).max(dim = 'member') 
-        lower = dat.sel(experiment = n).quantile(0.10, dim = 'member') 
-        upper = dat.sel(experiment = n).quantile(0.90, dim = 'member') 
-        plt.plot(mean.time, mean, color=colors[i], label = n)
-        plt.fill_between(mean.time, lower, upper, color=colors[i], alpha=0.2)
+        lower = dat.sel(experiment = n).chunk({"member": -1}).quantile(0.10, dim = 'member') 
+        upper = dat.sel(experiment = n).chunk({"member": -1}).quantile(0.90, dim = 'member') 
+        plt.plot(ds.y_label, mean, color=colors[i], label = n)
+        plt.fill_between(ds.y_label, lower, upper, color=colors[i], alpha=0.2)
     # plot obs
     if not isinstance(obs, bool):
-        plt.plot(obs.time, obs, color='k', label = obs.title)
+        plt.plot(ds.y_label, obs, color='k', label = obs.title)
     plt.legend(frameon=False)
     plt.ylabel(ds.name)
-    plt.title(region)
+    plt.title(region + ': ' + ds.period_label )
     if DEBUG:
         plt.show(); exit(1)
-    fig_name = ds.name + '_' + region + '_' + pd.to_datetime(mean.time.values[0]).strftime('%Y%m%d') + SUFFIX + '.png'
+    fig_name = ds.name + '_' + region + '_' + ds.period_label + SUFFIX + '.png'
     plt.savefig(fig_name, dpi=600, bbox_inches='tight')
     print('SAVED:', fig_name)
 

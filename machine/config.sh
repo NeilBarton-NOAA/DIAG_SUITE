@@ -1,6 +1,8 @@
 #!/bin/sh
 ####################################
 # Local Directoriesi and 'global' variables
+machine_config(){
+export DIAG_DIR=$( realpath $(dirname ${BASH_SOURCE[0]})/../logs )
 machine=$(uname -n)
 JOB_NAME=${JOB_NAME:-hpss}
 WALLTIME=${WALLTIME:-00:30:00}
@@ -48,7 +50,6 @@ if [[ ${BACKGROUND_JOB:-F} == T ]]; then
 fi
 
 mkdir -p ${DIAG_DIR}/logs
-export TOPDIR_OBS=${WORK_DIR}/${USER}/DIAG/OBS
-export TOPDIR_OUTPUT=${WORK_DIR}/${USER}/DIAG
-export TOPDIR_FIGURES=${WORK_DIR}/${USER}/FIGURES
-export pydiag_tools=${DIAG_DIR:-$PWD/../}/SCRIPTS
+export COMROOT=${COMROOT:-${WORK_DIR}/${USER}/RUNS/COMROOT}
+
+}
