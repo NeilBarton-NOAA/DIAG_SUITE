@@ -1,3 +1,7 @@
+analysis:
+  period: "202402"
+  experiments: ["beta1.1_CPC_ICs", "beta1.1_CPC_ICs_PND_TOPO", "beta1.1_FINAL"]
+
 variables:
   ice: ["aice", "hi", "hs", "Tsfc", "albsni", "meltt", "meltb"]
 
@@ -5,9 +9,6 @@ parse:
   interpolate: 
     perform: True
     grid_files: ["${PWD}/pytools/grids/NH10km.nc", "${PWD}/pytools/grids/SH10km.nc"]
-
-observations:
-  sic: ['/scratch4/NCEPDEV/stmp/Neil.Barton/DIAG/OBS/ice_concentration/osi_saf']
 
 plot:
   analysis: True

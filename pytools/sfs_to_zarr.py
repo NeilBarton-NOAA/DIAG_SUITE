@@ -14,6 +14,9 @@ def sfs_to_zarr(e, dir_ymd, config):
         d = dir_ymd + "/00/mem" + str(mem).zfill(3) + \
             "/products/ocean/netcdf/1p00/sfs.ocean*monthly_avg*nc"
         files = glob.glob(d)
+        if len(files) == 0:
+            print('  WARNING: no files found in ', d.split('/00/mem')[0])
+            return
         ds = xr.open_mfdataset(files)
         vars_month = ['ocnheat', 'dt20c']
         for v in vars_month:
@@ -53,8 +56,12 @@ def sfs_to_zarr(e, dir_ymd, config):
     ds['forecast_month'].attrs['long_name'] = 'month_of_forecast'
     # Save Data
     ds = ds.drop_vars('time_bnds', errors='ignore')
-    ds = ds.chunk({"time": 1, "experiment": -1, "component": -1, "member": -1, "forecast_month": -1,
+    ds = ds.chunk({"time": 24, "experiment": -1, "component": -1, "member": 1, "forecast_month": -1,
                    "z_l": -1, "latitude": 180, "longitude": 360, "nj": 200, "ni": 200,})
+    for var in ds.variables:
+        if 'chunks' in ds[var].encoding:
+            del ds[var].encoding['chunks']
+    
     if os.path.exists(config['zarr_file']):
         ds.to_zarr(config['zarr_file'], append_dim = 'time')
     else:

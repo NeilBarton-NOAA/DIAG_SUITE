@@ -168,12 +168,12 @@ def sel_analysis_period(da, forecast_time, analysis_period):
         da.attrs['period_label'] = str(da.time.values[0])[:7]
         da = da.isel(time = 0)
         forecast_times = forecast_time.isel(time = 0)
-    elif len(analysis_period[0]) == 6: #YYYYMM
-        da.attrs['period_label'] = f"{analysis_period[0][:4]}-{analysis_period[0][4:]}"
+    elif len(analysis_period) == 6: #YYYYMM
+        da.attrs['period_label'] = f"{analysis_period[:4]}-{analysis_period[4:]}"
         da = da.sel(time = da.period_label).squeeze(dim='time').drop_vars('time')
         forecast_times = forecast_time.sel(time = da.period_label).squeeze(dim='time').drop_vars('time')
     else:
-        print('FATAL: analysis_period unknown', analysis_period[0])
+        print('FATAL: analysis_period unknown', analysis_period)
         exit(1)
     return da, forecast_times
 

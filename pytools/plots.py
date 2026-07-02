@@ -5,6 +5,14 @@ import pandas as pd
 def line(ds, region = 'globe', obs = False, cell_area = False, DEBUG = False):
     exp_names = list(ds.experiment.values)
     SUFFIX = "_EXPS_" + "_".join(exp_names)
+    fig_name = ds.name + '_' + region + '_' + ds.period_label + SUFFIX + '.png'
+    if len(fig_name) > 255:
+        short_names = [item.rsplit('_', 1)[-1] for item in exp_names]
+        SUFFIX = "_EXPS_" + "_".join(short_names)
+        fig_name = ds.name + '_' + region + '_' + ds.period_label + SUFFIX + '.png'
+        if len(fig_name) > 255:
+            print("FATAL: fig_name too long", len(fig_name), fig_name)
+            exit(1)
     ####################################
     if ds.name in ['ice_extent', 'ice_volume', 'snow_volume']:
         dat = ds
@@ -65,12 +73,12 @@ def line(ds, region = 'globe', obs = False, cell_area = False, DEBUG = False):
     # plot obs
     if not isinstance(obs, bool):
         plt.plot(ds.y_label, obs, color='k', label = obs.title)
+    plt.xlim(ds.y_label.min(), ds.y_label.max())
     plt.legend(frameon=False)
     plt.ylabel(ds.name)
     plt.title(region + ': ' + ds.period_label )
     if DEBUG:
         plt.show(); exit(1)
-    fig_name = ds.name + '_' + region + '_' + ds.period_label + SUFFIX + '.png'
     plt.savefig(fig_name, dpi=600, bbox_inches='tight')
     print('SAVED:', fig_name)
 

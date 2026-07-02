@@ -15,13 +15,13 @@ def main():
     ################################################
     parser = argparse.ArgumentParser( description = "Comparing SFS Runs")
     parser.add_argument('-e', '--experiments', action = 'store', nargs = '+', 
-                        default = ['beta1.1_CPC_ICs_BRINE'],
+                        default = 'yaml',
                         help = 'experiments names from COMROOT directory')
     parser.add_argument('-v', '--var', action = 'store', nargs = 1,
                         default = ['SST'],
                         help = 'variable to analyze')
     parser.add_argument('-a', '--analysis_period', action = 'store', nargs = 1,
-                        default = 'first',
+                        default = 'yaml',
                         help = 'forecast start period to analyze default is to graph first time step')
     parser.add_argument('-c', '--comroot', action = 'store', nargs = 1,
                         default = os.getenv('NPB_WORKDIR') + '/RUNS/COMROOT',
@@ -37,11 +37,12 @@ def main():
                         help = 'show plot for debugging') 
     ############
     args = parser.parse_args()
-    var = args.var[0]
-    experiments = args.experiments
-    comroot = args.comroot
     config = py.load_yaml(args.yaml)
-    analysis_period = args.analysis_period
+    var = args.var[0]
+    experiments = config["analysis"]["experiments"] if args.experiments == 'yaml' else args.experiments
+    analysis_period = config["analysis"]["period"] if args.analysis_period == 'yaml' else args.analysis_period[0]
+    comroot = args.comroot
+    print(analysis_period)
     config["comroot"] = args.comroot
     FORCE_READ_DATA = args.force_read
     list_vars = args.list_vars
@@ -93,8 +94,7 @@ def main():
                 print(d)
                 py.sfs_to_zarr(e, str(d), config)
         ds.append(xr.open_zarr(ds_save))
-    ds = ds[0] if len(ds) == 1 else xr.concat(ds, dim = 'experiment', join = 'outer') #.chunk('auto') 
-    
+    ds = ds[0] if len(ds) == 1 else xr.concat(ds, dim='experiment', join='inner') #.chunk('auto')
     ################################################
     # data array for plotting/analysis
     ds = py.ds_addvar(ds, var)
@@ -132,8 +132,8 @@ def main():
         py.plots.line(da, 'tropics', obs, cell_area, DEBUG)
         py.plots.line(da, 'equator', obs, cell_area, DEBUG)
     if 'hemisphere' in da.dims:
-        ob = obs.sel(hemisphere = 'NH') if var in ['ice_extent'] else False
-        py.plots.line(da.sel(hemisphere = 'NH'), 'Arctic', ob, cell_area, DEBUG)
+        #ob = obs.sel(hemisphere = 'NH') if var in ['ice_extent'] else False
+        #py.plots.line(da.sel(hemisphere = 'NH'), 'Arctic', ob, cell_area, DEBUG)
         ob = obs.sel(hemisphere = 'SH') if var in ['ice_extent'] else False
         py.plots.line(da.sel(hemisphere = 'SH'), 'Antarctic', ob, cell_area, DEBUG)
     elif var != 'WWV':
