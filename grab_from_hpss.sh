@@ -6,9 +6,9 @@ WALLTIME="02:00:00"
 source ${PWD}/machine/config.sh && machine_config ${PWD}
 
 # SFS GFS ICs
-dir_hpss="/NCEPDEV/emc-marine/5year/Neil.Barton/SFS_GFS_ICS/GFS/C192mx025"
+dir_hpss="/NCEPDEV/emc-marine/5year/Neil.Barton/SFS_GFS_ICS"
 file_hpss="2026080100"
-export exp_dir=${WORK_DIR}/ICs
+export exp_dir="${WORK_DIR}/${USER}/ICs/GFS/C192mx025"
 # SFS runs
 #exp=beta1.1_CPC_ICs_PND_TOPO
 #dir_hpss="/NCEPDEV/emc-marine/5year/Neil.Barton/*/${exp}/*00/"
@@ -32,8 +32,8 @@ hpss_find_log=${PWD}/logs/${exp:-"GET"}.$(basename ${file_hpss}).log
 if [[ ! -f ${hpss_find_log} ]]; then
     echo "Finding files on HPSS"
     echo " hsi -q find ${dir_hpss}/ -name "*${file_hpss}*tar" 2>&1 | grep NCEP "
-    test=$(hsi -ql ${dir_hpss} 2>&1)
-    [[ ${?} > 0 ]] && echo "HPSS error" && exit 1
+    test=$(hsi ls -l ${dir_hpss} 2>&1)
+    [[ ${?} > 0 ]] && echo "FATAL: HPSS error" && exit 1
     hsi -q find ${dir_hpss}/ -name *${file_hpss}*tar 2>&1 | grep NCEP > ${hpss_find_log}
 fi
 files=$(cat ${hpss_find_log})

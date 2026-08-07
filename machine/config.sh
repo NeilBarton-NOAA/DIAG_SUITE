@@ -31,7 +31,7 @@ elif [[ ${machine} == u* ]]; then
 elif [[ ${machine} == *[cd]login* ]] || [[ ${machine} == nid* ]]; then
     BATCH_SYSTEM="qsub"
     machine=wcoss2
-    export WORK_DIR=/lfs/h2/emc/stmp/${USER}
+    export WORK_DIR=/lfs/h2/emc/stmp
 else
     echo 'FATAL: MACHINE UNKNOWN'
     exit 1
