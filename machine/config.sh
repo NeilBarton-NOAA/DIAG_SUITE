@@ -28,21 +28,40 @@ elif [[ ${machine} == u* ]]; then
     export WORK_DIR=/scratch4/NCEPDEV/stmp
     SUBMIT_SUFFIX="--qos ${QOS:-batch}"
     SUBMIT_HPSS_SUFFIX="--partition=u1-service"
+elif [[ ${machine} == *[cd]login* ]] || [[ ${machine} == nid* ]]; then
+    BATCH_SYSTEM="qsub"
+    machine=wcoss2
+    export WORK_DIR=/lfs/h2/emc/stmp/${USER}
 else
     echo 'FATAL: MACHINE UNKNOWN'
     exit 1
 fi
 
+if [[ ${BATCH_SYSTEM} == "sbatch" ]]; then
 SUBMIT="${BATCH_SYSTEM} 
     --job-name=${JOB_NAME} 
-    --output=${DIAG_DIR}/logs/${JOB_NAME}.out
-    --error=${DIAG_DIR}/logs/${JOB_NAME}.out
+    --output=${DIAG_DIR}/${JOB_NAME}.out
+    --error=${DIAG_DIR}/${JOB_NAME}.out
     --time=${WALLTIME} 
     --account=${HPC_ACCOUNT} 
     --ntasks=1 
     --mem=100G 
     ${SUBMIT_SUFFIX}"
 SUBMIT_HPSS="${SUBMIT} ${SUBMIT_HPSS_SUFFIX}"
+
+elif [[ ${BATCH_SYSTEM} == "qsub" ]]; then
+SUBMIT_HPSS="#!/bin/bash
+#PBS -N ${JOB_NAME} 
+#PBS -o $(readlink -m ${DIAG_DIR}/${JOB_NAME}.out) 
+#PBS -e $(readlink -m ${DIAG_DIR}/${JOB_NAME}.out) 
+#PBS -l walltime=0${WALLTIME}
+#PBS -l select=1:ncpus=1 
+#PBS -A ${HPC_ACCOUNT}
+#PBS -q dev_transfer
+#PBS -V"
+
+fi
+
 
 if [[ ${BACKGROUND_JOB:-F} == T ]]; then
     SUBMIT=""
