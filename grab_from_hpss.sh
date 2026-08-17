@@ -1,20 +1,21 @@
 #!/bin/sh
 set -u
 BACKGROUND_JOB=F
-
 WALLTIME="02:00:00"
 source ${PWD}/machine/config.sh && machine_config ${PWD}
 
-# SFS GFS ICs
-dir_hpss="/NCEPDEV/emc-marine/5year/Neil.Barton/SFS_GFS_ICS"
-file_hpss="2026080100"
-export exp_dir="${WORK_DIR}/${USER}/ICs/GFS/C192mx025"
+#GFS SFS ICs
+#dir_hpss="/NCEPDEV/emc-marine/5year/Neil.Barton/SFS_GFS_ICS"
+#file_hpss="2026080100"
+#export exp_dir="${WORK_DIR}/${USER}/ICs/GFS/C192mx025"
+
 # SFS runs
 #exp=beta1.1_CPC_ICs_PND_TOPO
-#dir_hpss="/NCEPDEV/emc-marine/5year/Neil.Barton/*/${exp}/*00/"
-#file_hpss=product_monthly #namelists
+exp=beta1.1_GFS_ICs
+dir_hpss="/NCEPDEV/emc-marine/5year/Neil.Barton/*/${exp}/*00/"
+file_hpss=product_monthly #namelists
+export exp_dir=${COMROOT}/${exp}
 #num_files=64 && file_name="6hr_avg*nc"
-#export exp_dir=${COMROOT}/${exp}
 
 # GFS RealTime
 #exp=retrov17_01_realtime

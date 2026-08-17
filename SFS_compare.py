@@ -132,8 +132,8 @@ def main():
         py.plots.line(da, 'tropics', obs, cell_area, DEBUG)
         py.plots.line(da, 'equator', obs, cell_area, DEBUG)
     if 'hemisphere' in da.dims:
-        #ob = obs.sel(hemisphere = 'NH') if var in ['ice_extent'] else False
-        #py.plots.line(da.sel(hemisphere = 'NH'), 'Arctic', ob, cell_area, DEBUG)
+        ob = obs.sel(hemisphere = 'NH') if var in ['ice_extent'] else False
+        py.plots.line(da.sel(hemisphere = 'NH'), 'Arctic', ob, cell_area, DEBUG)
         ob = obs.sel(hemisphere = 'SH') if var in ['ice_extent'] else False
         py.plots.line(da.sel(hemisphere = 'SH'), 'Antarctic', ob, cell_area, DEBUG)
     elif var != 'WWV':
