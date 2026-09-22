@@ -6,7 +6,10 @@ import xarray as xr
 
 def sfs_to_zarr(e, dir_ymd, config):
     ds_ocn, ds_ice = [], []
-    mems = len(glob.glob(dir_ymd + "/00/mem*/products/ocean/netcdf/1p00/"))
+    if config["n_members"] == 'all':
+        mems = len(glob.glob(dir_ymd + "/00/mem*/products/ocean/netcdf/1p00/"))
+    else:
+        mems = config["n_members"]
     for mem in range(mems):
         print("  member: ", mem)
         #print(e + d)
@@ -41,7 +44,9 @@ def sfs_to_zarr(e, dir_ymd, config):
     ds_ocn = ds_ocn.expand_dims({'component' : ['ocn']})
     ds_ice = xr.concat(ds_ice, dim = 'member')
     ds_ice = ds_ice.expand_dims({'component' : ['ice']})
-    ds = xr.concat([ds_ocn, ds_ice], dim = 'component')
+    ds_ocn = ds_ocn.chunk({'member': -1})
+    ds_ice = ds_ice.chunk({'member': -1})
+    ds = xr.concat([ds_ocn, ds_ice], dim = 'component', data_vars = 'minimal', coords='minimal', compat='override')
     ds = ds.expand_dims({'experiment': [e] })
     ########################
     # Change Time Dimension to forecast month
@@ -56,14 +61,11 @@ def sfs_to_zarr(e, dir_ymd, config):
     ds['forecast_month'].attrs['long_name'] = 'month_of_forecast'
     # Save Data
     ds = ds.drop_vars('time_bnds', errors='ignore')
-    ds = ds.chunk({"time": 24, "experiment": -1, "component": -1, "member": 1, "forecast_month": -1,
-                   "z_l": -1, "latitude": 180, "longitude": 360, "nj": 200, "ni": 200,})
+    ds = ds.chunk({"time": 1, "experiment": -1, "component": -1, "member": 1, "forecast_month": -1,
+                   "z_l": -1, "latitude": -1, "longitude": -1, "nj": -1, "ni": -1,})
     for var in ds.variables:
-        if 'chunks' in ds[var].encoding:
-            del ds[var].encoding['chunks']
-    
+        ds[var].encoding.clear()
     if os.path.exists(config['zarr_file']):
-        ds.to_zarr(config['zarr_file'], append_dim = 'time')
+        ds.to_zarr(config['zarr_file'], append_dim = 'time', consolidated=True)
     else:
-        ds.to_zarr(config['zarr_file'])   
-
+        ds.to_zarr(config['zarr_file'], consolidated=True)

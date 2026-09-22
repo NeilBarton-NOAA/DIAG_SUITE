@@ -79,23 +79,32 @@ def get_thickness(z_l):
 
 def ds_addvar(ds, var):
     if var == 'ice_extent':
-        NH = ds['cell_area'].where((ds['TLAT'] > 20) & (ds['aice'] >= 0.15)).sum(dim = ['nj', 'ni']) / 1e12
-        SH = ds['cell_area'].where((ds['TLAT'] < -20) & (ds['aice'] >= 0.15)).sum(dim = ['nj', 'ni']) / 1e12
-        NH = NH.expand_dims({'hemisphere': ['NH']})
-        SH = SH.expand_dims({'hemisphere': ['SH']})
-        ds[var] = xr.concat([NH, SH], dim = 'hemisphere')
+        # 1. Create spatial mask
+        nh_mask = (ds['TLAT'] > 20) & (ds['aice'] >= 0.15)
+        sh_mask = (ds['TLAT'] < -20) & (ds['aice'] >= 0.15)
+        
+        # 2. Sum over spatial dimensions IMMEDIATELY and compute to collapse the spatial grid
+        NH = (ds['cell_area'] * nh_mask).sum(dim=['nj', 'ni']) / 1e12
+        SH = (ds['cell_area'] * sh_mask).sum(dim=['nj', 'ni']) / 1e12
+        
+        # 3. Trigger .compute() on the spatial sum to free the large grid from the Dask task graph
+        NH = NH.compute().expand_dims({'hemisphere': ['NH']})
+        SH = SH.compute().expand_dims({'hemisphere': ['SH']})
+        
+        ds[var] = xr.concat([NH, SH], dim='hemisphere')
+
     if var == 'snow_volume':
-        NH = (ds['aice'] * ds['hs'] * ds['cell_area']).where(ds['TLAT'] > 20).sum(dim = ['nj', 'ni']) / 1e12
-        SH = (ds['aice'] * ds['hs'] * ds['cell_area']).where(ds['TLAT'] < -20).sum(dim = ['nj', 'ni']) / 1e12
-        NH = NH.expand_dims({'hemisphere': ['NH']})
-        SH = SH.expand_dims({'hemisphere': ['SH']})
-        ds[var] = xr.concat([NH, SH], dim = 'hemisphere')
+        NH = (ds['aice'] * ds['hs'] * ds['cell_area']).where(ds['TLAT'] > 20).sum(dim=['nj', 'ni']) / 1e12
+        SH = (ds['aice'] * ds['hs'] * ds['cell_area']).where(ds['TLAT'] < -20).sum(dim=['nj', 'ni']) / 1e12
+        NH = NH.compute().expand_dims({'hemisphere': ['NH']})
+        SH = SH.compute().expand_dims({'hemisphere': ['SH']})
+        ds[var] = xr.concat([NH, SH], dim='hemisphere')
     if var == 'ice_volume':
-        NH = (ds['aice'] * ds['hi'] * ds['cell_area']).where(ds['TLAT'] > 20).sum(dim = ['nj', 'ni']) / 1e12
-        SH = (ds['aice'] * ds['hi'] * ds['cell_area']).where(ds['TLAT'] < -20).sum(dim = ['nj', 'ni']) / 1e12
-        NH = NH.expand_dims({'hemisphere': ['NH']})
-        SH = SH.expand_dims({'hemisphere': ['SH']})
-        ds[var] = xr.concat([NH, SH], dim = 'hemisphere')
+        NH = (ds['aice'] * ds['hi'] * ds['cell_area']).where(ds['TLAT'] > 20).sum(dim=['nj', 'ni']) / 1e12
+        SH = (ds['aice'] * ds['hi'] * ds['cell_area']).where(ds['TLAT'] < -20).sum(dim=['nj', 'ni']) / 1e12
+        NH = NH.compute().expand_dims({'hemisphere': ['NH']})
+        SH = SH.compute().expand_dims({'hemisphere': ['SH']})
+        ds[var] = xr.concat([NH, SH], dim='hemisphere')
     if var == 'SSS':
         ds[var] = ds['so'].isel(z_l = 0 )
     if var == 'SVA':
@@ -168,6 +177,10 @@ def sel_analysis_period(da, forecast_time, analysis_period):
         da.attrs['period_label'] = str(da.time.values[0])[:7]
         da = da.isel(time = 0)
         forecast_times = forecast_time.isel(time = 0)
+    elif analysis_period == 'all':
+        da = da.mean(dim = 'time', keep_attrs=True)
+        da.attrs['period_label'] = 'ALL'
+        forecast_times = forecast_time #.sel(time = da.period_label).squeeze(dim='time').drop_vars('time')
     elif len(analysis_period) == 6: #YYYYMM
         da.attrs['period_label'] = f"{analysis_period[:4]}-{analysis_period[4:]}"
         da = da.sel(time = da.period_label).squeeze(dim='time').drop_vars('time')

@@ -1,6 +1,8 @@
 analysis:
-  period: "202402"
   experiments: ["beta1.1_CPC_ICs", "beta1.1_CPC_ICs_PND_TOPO", "beta1.1_FINAL"]
+  variable: 'SST'
+  period: 'all'
+  n_members: 'all'
 
 variables:
   ice: ["aice", "hi", "hs", "Tsfc", "albsni", "meltt", "meltb"]
@@ -11,13 +13,9 @@ parse:
     grid_files: ["${PWD}/pytools/grids/NH10km.nc", "${PWD}/pytools/grids/SH10km.nc"]
 
 plot:
-  analysis: True
-  time_slice_int: 8
+  maps: False
+  line: True
+  spread: True
+  regions: ['global', 'nino34', 'tropics', 'equator', 'Arctic', 'Antarctic']
 
-maps:
-  forecast_days: [0,2,8,16]
-  interpolation_grid: 0.25
-  contour_sic_analysis: True
-  
 delete_files: False
-

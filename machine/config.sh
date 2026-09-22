@@ -68,7 +68,7 @@ if [[ ${BACKGROUND_JOB:-F} == T ]]; then
     SUBMIT_HPSS=""
 fi
 
-mkdir -p ${DIAG_DIR}/logs
+mkdir -p ${DIAG_DIR}
 export COMROOT=${COMROOT:-${WORK_DIR}/${USER}/RUNS/COMROOT}
 
 }

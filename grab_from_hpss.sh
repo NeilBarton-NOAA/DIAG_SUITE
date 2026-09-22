@@ -11,9 +11,13 @@ source ${PWD}/machine/config.sh && machine_config ${PWD}
 
 # SFS runs
 #exp=beta1.1_CPC_ICs_PND_TOPO
-exp=beta1.1_GFS_ICs
-dir_hpss="/NCEPDEV/emc-marine/5year/Neil.Barton/*/${exp}/*00/"
-file_hpss=product_monthly #namelists
+#exp=beta1.1_GFS_ICs
+#dir_hpss="/NCEPDEV/emc-marine/5year/*eil.*arton/*/${exp}/202609*00/"
+#dir_hpss="/NCEPDEV/emc-climate/5year/Jiande.Wang/URSA/beta1.1_GFS_ICs/SFS_C192mx025_GFSV17ICs/*00/"
+#/NCEPDEV/emc-climate/5year/Jiande.Wang/URSA/C192mx025-reforecast_Sep01
+dir_hpss=/NCEPDEV/emc-climate/5year/Jiande.Wang/URSA/
+exp=C192mx025-reforecast_Sep01
+file_hpss=namelists #product_monthly #namelists
 export exp_dir=${COMROOT}/${exp}
 #num_files=64 && file_name="6hr_avg*nc"
 
@@ -29,7 +33,7 @@ mkdir -p ${exp_dir}
 ########################
 # get all tar files that are available 
 main(){
-hpss_find_log=${PWD}/logs/${exp:-"GET"}.$(basename ${file_hpss}).log
+hpss_find_log=${PWD}/logs/files.HPSS.${exp:-"grab"}.$(basename ${file_hpss}).log
 if [[ ! -f ${hpss_find_log} ]]; then
     echo "Finding files on HPSS"
     echo " hsi -q find ${dir_hpss}/ -name "*${file_hpss}*tar" 2>&1 | grep NCEP "
@@ -43,7 +47,7 @@ for f in ${files}; do
     echo $f
     dtg=$( echo "${f}" | awk -F'/' '{print $(NF-1)}' )
     echo "  downloading ${f}"
-    JOB_NAME=GET.${exp:-"F"}.$(basename ${f%.tar}).${dtg}
+    JOB_NAME=HPSS.${exp:-"F"}.$(basename ${f%.tar}).${dtg}
     machine_config ${PWD}
     correct_n_files "${exp_dir}/*.${dtg:0:8}/${dtg:8:2}" "${file_name:-unknown}" ${num_files:-1e10}
     if [[ ${FILES_CORRECT} != T ]]; then

@@ -10,8 +10,10 @@ p = os.getenv("pytools", os.path.dirname(os.path.realpath(__file__)))
 if p not in sys.path: sys.path.insert(0, p)
 import pytools as py
 from pytools.obs import cm
+import tracemalloc
 
 def main():
+    tracemalloc.start()
     ################################################
     parser = argparse.ArgumentParser( description = "Comparing SFS Runs")
     parser.add_argument('-e', '--experiments', action = 'store', nargs = '+', 
@@ -39,11 +41,12 @@ def main():
     args = parser.parse_args()
     config = py.load_yaml(args.yaml)
     var = args.var[0]
+    var = config["analysis"]["variable"] if args.var == 'yaml' else args.var[0]
     experiments = config["analysis"]["experiments"] if args.experiments == 'yaml' else args.experiments
     analysis_period = config["analysis"]["period"] if args.analysis_period == 'yaml' else args.analysis_period[0]
+    config["n_members"] = config['analysis']['n_members']
     comroot = args.comroot
-    print(analysis_period)
-    config["comroot"] = args.comroot
+    config["comroot"] = comroot
     FORCE_READ_DATA = args.force_read
     list_vars = args.list_vars
     DEBUG = args.debug
@@ -81,20 +84,35 @@ def main():
         if FORCE_READ_DATA:
             if os.path.exists(ds_save):
                 shutil.rmtree(ds_save)
+        
+        # if ds exist, grab dtgs
+        ds_dtgs = np.array([])
+        if os.path.exists(ds_save):
+            with xr.open_zarr(ds_save) as zds:
+                if 'time' in zds:
+                    ds_dtgs = zds['time'].astype("datetime64[D]").values
         print(e)
-        for d in sorted(Path(exps[e]).glob("*01")):
-            if os.path.exists(ds_save):
-                dtg = os.path.basename(d).split(".")[-1]
-                dtg = np.datetime64(f"{dtg[:4]}-{dtg[4:6]}-{dtg[6:8]}")
-                ds_dtg = xr.open_zarr(ds_save)['time'].astype("datetime64[D]")
-                PARSE_FILES = False if np.any(dtg == ds_dtg) else True
-            else:
-                PARSE_FILES = True
+        print(' ', ds_save)
+        
+        exp_dir = exps[e]
+        matching_dirs = sorted([
+            Path(exp_dir) / entry.name 
+            for entry in os.scandir(exp_dir) 
+            if entry.is_dir() and entry.name.endswith("01")
+        ])
+
+        for d in matching_dirs:
+            dtg = os.path.basename(d).split(".")[-1]
+            dtg = np.datetime64(f"{dtg[:4]}-{dtg[4:6]}-{dtg[6:8]}")
+            PARSE_FILES = dtg not in ds_dtgs
             if PARSE_FILES:
-                print(d)
+                print('  adding ',d)
                 py.sfs_to_zarr(e, str(d), config)
-        ds.append(xr.open_zarr(ds_save))
-    ds = ds[0] if len(ds) == 1 else xr.concat(ds, dim='experiment', join='inner') #.chunk('auto')
+        ds.append(xr.open_zarr(ds_save, chunks = {'time':1}))
+    #ds = ds[0] if len(ds) == 1 else xr.concat(ds, dim='experiment', join='inner') #.chunk('auto')
+    aligned_ds = xr.align(*ds, join='inner', exclude=['experiment'])
+    ds = aligned_ds[0] if len(aligned_ds) == 1 else xr.concat(aligned_ds, dim='experiment')
+    
     ################################################
     # data array for plotting/analysis
     ds = py.ds_addvar(ds, var)
@@ -108,38 +126,50 @@ def main():
     
     ################################################
     # grab obs
-    if var in ['ice_extent']: # 'SST'
-        cm.start_dtg = pd.to_datetime(forecast_times.values.min()).replace(day = 1)
-        cm.end_dtg = pd.to_datetime(forecast_times.values.max()) + pd.offsets.MonthEnd(0)
-        cm.var = var
-        obs = cm.grab()
-    else:
-        obs = False
-    
+    #if var in ['ice_extent']: # 'SST'
+    #    cm.start_dtg = pd.to_datetime(forecast_times.values.min()).replace(day = 1)
+    #    cm.end_dtg = pd.to_datetime(forecast_times.values.max()) + pd.offsets.MonthEnd(0)
+    #    cm.var = var
+    #    obs = cm.grab()
+    #else:
+    #    obs = False
+    obs = False 
     ########################
     # spatial plots
     # global
-    if (len(exps) == 2) and (model == 'ocn'):
-        py.maps.three_panel(da, DEBUG)
-    # polar 
-    if (len(exps) == 2) and (model == 'ice') and (var not in ['ice_extent', 'ice_volume', 'snow_volume']):
-        py.maps.six_panel(da, DEBUG)
+    if config['plot']['maps']:
+        if (len(exps) == 2) and (model == 'ocn'):
+            py.maps.three_panel(da, DEBUG)
+        # polar 
+        if (len(exps) == 2) and (model == 'ice') and (var not in ['ice_extent', 'ice_volume', 'snow_volume']):
+            py.maps.six_panel(da, DEBUG)
+    
     ########################
     # line plots
-    if model == 'ocn':
-        py.plots.line(da, 'global', obs, cell_area, DEBUG)
-        py.plots.line(da, 'nino34', obs, cell_area, DEBUG)
-        py.plots.line(da, 'tropics', obs, cell_area, DEBUG)
-        py.plots.line(da, 'equator', obs, cell_area, DEBUG)
-    if 'hemisphere' in da.dims:
-        ob = obs.sel(hemisphere = 'NH') if var in ['ice_extent'] else False
-        py.plots.line(da.sel(hemisphere = 'NH'), 'Arctic', ob, cell_area, DEBUG)
-        ob = obs.sel(hemisphere = 'SH') if var in ['ice_extent'] else False
-        py.plots.line(da.sel(hemisphere = 'SH'), 'Antarctic', ob, cell_area, DEBUG)
-    elif var != 'WWV':
-        py.plots.line(da, 'Arctic', obs, cell_area, DEBUG)
-        py.plots.line(da, 'Antarctic', obs, cell_area, DEBUG)
-
+    if config['plot']['line'] or config['plot']['line']:
+        py.plots.line.da = da
+        py.plots.line.obs = obs
+        py.plots.line.debug_plot = False
+        py.plots.line.cell_area = cell_area
+        region_hem = { "NH": "Arctic", "SH": "Antarctic" }
+        spread_options = [config['plot']['line'] == False, config['plot']['spread']]
+        for spread in spread_options:
+            py.plots.line.plot_spread = spread
+            for region in config['plot']['regions']:
+                py.plots.line.region = region
+                if model == 'ocn':
+                    if not (var == 'WWV' and region in ['Arctic', 'Antarctic']):
+                        py.plots.line.create()
+            if 'hemisphere' in da.dims:
+                for hem in ['NH', 'SH']:
+                    py.plots.line.region = region_hem[hem]
+                    py.plots.line.create()
+                     
+    snapshot = tracemalloc.take_snapshot()
+    top_stats = snapshot.statistics('lineno')
+    print("[ Top 10 Memory Allocations ]")
+    for stat in top_stats[:10]:
+        print(stat)
     print('SCRIPT FINISHED')
 
 if __name__ == "__main__":
