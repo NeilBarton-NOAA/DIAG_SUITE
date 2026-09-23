@@ -109,13 +109,28 @@ def main():
                 print('  adding ',d)
                 py.sfs_to_zarr(e, str(d), config)
         ds.append(xr.open_zarr(ds_save, chunks = {'time':1}))
-    #ds = ds[0] if len(ds) == 1 else xr.concat(ds, dim='experiment', join='inner') #.chunk('auto')
     aligned_ds = xr.align(*ds, join='inner', exclude=['experiment'])
+    common_members = set(ds[0].member.values)
+    for d in ds[1:]:
+        common_members &= set(d.member.values)
+    common_members = sorted(list(common_members))
+    # Subset datasets to only common members before concatenating
+    aligned_ds = [d.sel(member=common_members) for d in aligned_ds]
     ds = aligned_ds[0] if len(aligned_ds) == 1 else xr.concat(aligned_ds, dim='experiment')
+    if len(ds.time) == 0:
+        print('FATAL No Times Match in data sets')
+        for e in exps.keys():
+            ds_save = Path(config['comroot'] + "/ZARR/") / Path(e + '_monthly.zarr')
+            ds = xr.open_zarr(ds_save, chunks = {'time':1})
+            print(' ', e)
+            print(' ', ds.time.dt.strftime('%Y-%m-%d %HZ').values)
+        exit(1)
+    #aligned_ds = xr.align(*ds, join='inner', exclude=['experiment'])
+    #ds = aligned_ds[0] if len(aligned_ds) == 1 else xr.concat(aligned_ds, dim='experiment')
     
     ################################################
     # data array for plotting/analysis
-    ds = py.ds_addvar(ds, var)
+    ds = py.ds_addvar(ds, var, Path(config['comroot'] + "/ZARR/") / Path(e + '_monthly_' + var + '.zarr'))
     ice_vars = ['ice_extent', 'ice_volume', 'snow_volume', 'Tsfc', 'aice', 'albsni', 'hi', 'hs']
     model = 'ice' if var in ice_vars else 'ocn'
     da = ds[var].sel(component = model, experiment = exp_names)
@@ -164,7 +179,7 @@ def main():
                 for hem in ['NH', 'SH']:
                     py.plots.line.region = region_hem[hem]
                     py.plots.line.create()
-                     
+    # memory allocation
     snapshot = tracemalloc.take_snapshot()
     top_stats = snapshot.statistics('lineno')
     print("[ Top 10 Memory Allocations ]")

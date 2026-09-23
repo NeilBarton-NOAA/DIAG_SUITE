@@ -77,34 +77,133 @@ def get_thickness(z_l):
     z_i = np.array(z_i)
     return np.diff(z_i)
 
-def ds_addvar(ds, var):
-    if var == 'ice_extent':
-        # 1. Create spatial mask
-        nh_mask = (ds['TLAT'] > 20) & (ds['aice'] >= 0.15)
-        sh_mask = (ds['TLAT'] < -20) & (ds['aice'] >= 0.15)
-        
-        # 2. Sum over spatial dimensions IMMEDIATELY and compute to collapse the spatial grid
-        NH = (ds['cell_area'] * nh_mask).sum(dim=['nj', 'ni']) / 1e12
-        SH = (ds['cell_area'] * sh_mask).sum(dim=['nj', 'ni']) / 1e12
-        
-        # 3. Trigger .compute() on the spatial sum to free the large grid from the Dask task graph
-        NH = NH.compute().expand_dims({'hemisphere': ['NH']})
-        SH = SH.compute().expand_dims({'hemisphere': ['SH']})
-        
-        ds[var] = xr.concat([NH, SH], dim='hemisphere')
+def ds_addvar(ds, var, ds_save=None):
+    print('adding variable', var)
+    # Check if variable already exists in ds
+    if var in ds:
+        return ds
+    # Handle derived Zarr cachingif ds_save path is provided
+    if (ds_save is not None) and (ds_save.exists()):
+        print(f"LOADING CACHED {var} FROM: {ds_save}")
+        ds_derived = xr.open_dataset(ds_save, engine="zarr")
+        ds[var] = ds_derived[var]
+        return ds
+    # --- CALCULATION LOGIC ---
+    if var in ['ice_extent', 'snow_volume', 'ice_volume']:
+        # 1. Pull 2D static coordinates into RAM as small NumPy arrays (~a few KB)
+        tlat = ds['TLAT'].values if hasattr(ds['TLAT'], 'values') else ds['TLAT'].compute().values
+        area = ds['cell_area'].values if hasattr(ds['cell_area'], 'values') else ds['cell_area'].compute().values
+        area = area / 1e12  # Convert m^2 to 10^6 km^2 upfront
+        # 2. Create 2D hemisphere boolean masks
+        nh_mask = tlat > 20
+        sh_mask = tlat < -20
+        # 3. Streamlined computation using .where()
+        if var == 'ice_extent':
+            ice_mask = ds['aice'] >= 0.15
+            nh_val = (ds['cell_area'].where(ice_mask & nh_mask)).sum(dim=['nj', 'ni']) / 1e12
+            sh_val = (ds['cell_area'].where(ice_mask & sh_mask)).sum(dim=['nj', 'ni']) / 1e12
+        elif var == 'snow_volume':
+            snow_vol = ds['aice'] * ds['hs'] * area
+            nh_val = snow_vol.where(nh_mask).sum(dim=['nj', 'ni'])
+            sh_val = snow_vol.where(sh_mask).sum(dim=['nj', 'ni'])
+        elif var == 'ice_volume':
+            ice_vol = ds['aice'] * ds['hi'] * area
+            nh_val = ice_vol.where(nh_mask).sum(dim=['nj', 'ni'])
+            sh_val = ice_vol.where(sh_mask).sum(dim=['nj', 'ni'])
+        # 4. Concatenate both hemispheres
+        nh_val = nh_val.expand_dims({'hemisphere': ['NH']})
+        sh_val = sh_val.expand_dims({'hemisphere': ['SH']})
+        # 5. Compute the final collapsed timeseries (~few KB total size)
+        res_var = xr.concat([nh_val, sh_val], dim='hemisphere').compute()
+        ds[var] = res_var
+    elif var == 'SSS':
+        ds[var] = ds['so'].isel(z_l=0)
+    elif var == 'SVA':
+        h = xr.DataArray(get_thickness(ds['z_l']), coords={'z_l': ds.z_l}, dims=['z_l'])
+        salt = ds['so'] * h
+        salt_w = salt.sum(dim='z_l') / h.sum(dim='z_l')
+        ds[var] = salt_w.where(ds['SST'].notnull())
+    elif var == 'WWV':
+        R = 6371000  # Radius of Earth in meters
+        d_lat = np.radians(1.0)
+        d_lon = np.radians(1.0)
+        area_grid = (R**2) * d_lat * d_lon * np.cos(np.radians(ds['latitude']))
+        mld_broadcast, area_grid = xr.broadcast(ds['dt20c'], area_grid)
+        ds[var] = (ds['dt20c'] * area_grid) / 1e9
+    elif var == 'ocnheat':
+        ds['ocnheat'] = ds['ocnheat'] / 1e9
+    elif var == 'T300':
+        rho0 = 1035.0
+        cp = 3991.8679
+        ds['h'] = xr.DataArray(get_thickness(ds['z_l']), coords={'z_l': ds.z_l}, dims=['z_l'])
+        depth_bottom = ds.h.cumsum(dim='z_l')
+        depth_top = depth_bottom - ds.h
+        dz_300 = np.maximum(0, np.minimum(depth_bottom, 300) - depth_top)
+        ohc_per_m2 = (ds.temp * dz_300 * rho0 * cp).sum(dim='z_l')
+        ds[var] = ohc_per_m2 / 1e9
+    # --- SAVE TO ZARR CACHE ---
+    if ds_save is not None:
+        print(f"SAVING DERIVED VAR {var} TO: {ds_save}")
+        da_out = ds[var].copy()
+        # 2. Reset coordinates that aren't strictly core dimensions
+        # Keeps dimensions like ['experiment', 'member', 'time', 'hemisphere']
+        keep_dims = list(da_out.dims)
+        da_out = da_out.drop_vars([c for c in da_out.coords if c not in keep_dims])
+        # 3. Create a clean Dataset and force object coordinates (like hemisphere strings) to str dtype
+        ds_out = xr.Dataset({var: da_out})
+        for c in ds_out.coords:
+            if ds_out[c].dtype == object:
+                ds_out[c] = ds_out[c].astype(str)
+        # 4. Save clean dataset to Zarr
+        ds_out.to_zarr(ds_save, mode='w', consolidated=True)
+    return ds
 
-    if var == 'snow_volume':
-        NH = (ds['aice'] * ds['hs'] * ds['cell_area']).where(ds['TLAT'] > 20).sum(dim=['nj', 'ni']) / 1e12
-        SH = (ds['aice'] * ds['hs'] * ds['cell_area']).where(ds['TLAT'] < -20).sum(dim=['nj', 'ni']) / 1e12
-        NH = NH.compute().expand_dims({'hemisphere': ['NH']})
-        SH = SH.compute().expand_dims({'hemisphere': ['SH']})
-        ds[var] = xr.concat([NH, SH], dim='hemisphere')
-    if var == 'ice_volume':
-        NH = (ds['aice'] * ds['hi'] * ds['cell_area']).where(ds['TLAT'] > 20).sum(dim=['nj', 'ni']) / 1e12
-        SH = (ds['aice'] * ds['hi'] * ds['cell_area']).where(ds['TLAT'] < -20).sum(dim=['nj', 'ni']) / 1e12
-        NH = NH.compute().expand_dims({'hemisphere': ['NH']})
-        SH = SH.compute().expand_dims({'hemisphere': ['SH']})
-        ds[var] = xr.concat([NH, SH], dim='hemisphere')
+
+
+
+
+
+
+
+
+
+    print('adding variable', var)
+    if var in ['ice_extent', 'snow_volume', 'ice_volume']:
+        # 1. Pull 2D static coordinates into RAM as small NumPy arrays (~a few KB)
+        # This prevents Dask from broadcasting 2D grid metrics across member/time/exp dimensions
+        tlat = ds['TLAT'].values if hasattr(ds['TLAT'], 'values') else ds['TLAT'].compute().values
+        area = ds['cell_area'].values if hasattr(ds['cell_area'], 'values') else ds['cell_area'].compute().values
+        area = area / 1e12  # Convert m^2 to 10^6 km^2 upfront
+
+        # 2. Create 2D hemisphere boolean masks
+        nh_mask = tlat > 20
+        sh_mask = tlat < -20
+
+        # 3. Streamlined computation using .where() rather than large array multiplication
+        if var == 'ice_extent':
+            # Create a boolean mask for ice extent (aice >= 15%)
+            ice_mask = ds['aice'] >= 0.15
+            
+            # Apply spatial area and sum over grid dimensions lazily
+            nh_val = (ds['cell_area'].where(ice_mask & nh_mask)).sum(dim=['nj', 'ni']) / 1e12
+            sh_val = (ds['cell_area'].where(ice_mask & sh_mask)).sum(dim=['nj', 'ni']) / 1e12
+
+        elif var == 'snow_volume':
+            snow_vol = ds['aice'] * ds['hs'] * area
+            nh_val = snow_vol.where(nh_mask).sum(dim=['nj', 'ni'])
+            sh_val = snow_vol.where(sh_mask).sum(dim=['nj', 'ni'])
+
+        elif var == 'ice_volume':
+            ice_vol = ds['aice'] * ds['hi'] * area
+            nh_val = ice_vol.where(nh_mask).sum(dim=['nj', 'ni'])
+            sh_val = ice_vol.where(sh_mask).sum(dim=['nj', 'ni'])
+
+        # 4. Concatenate both hemispheres into a single spatial-collapsed array
+        nh_val = nh_val.expand_dims({'hemisphere': ['NH']})
+        sh_val = sh_val.expand_dims({'hemisphere': ['SH']})
+        
+        # 5. Compute the final collapsed timeseries (~few KB total size)
+        ds[var] = xr.concat([nh_val, sh_val], dim='hemisphere').compute()
     if var == 'SSS':
         ds[var] = ds['so'].isel(z_l = 0 )
     if var == 'SVA':

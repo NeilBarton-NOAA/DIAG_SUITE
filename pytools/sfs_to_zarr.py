@@ -12,7 +12,6 @@ def sfs_to_zarr(e, dir_ymd, config):
         mems = config["n_members"]
     for mem in range(mems):
         print("  member: ", mem)
-        #print(e + d)
         # MOM6 output
         d = dir_ymd + "/00/mem" + str(mem).zfill(3) + \
             "/products/ocean/netcdf/1p00/sfs.ocean*monthly_avg*nc"

@@ -101,6 +101,7 @@ class line(object):
                 mean = sub_dat.mean(dim='member').compute()
                 lower = sub_dat.min(dim='member').compute()
                 upper = sub_dat.max(dim='member').compute()
+                print(mean)
                 ax.plot(da.y_label, mean, color=colors[i], label=n)
                 ax.fill_between(da.y_label, lower, upper, color=colors[i], alpha=0.2)
         if not isinstance(obs, bool):
