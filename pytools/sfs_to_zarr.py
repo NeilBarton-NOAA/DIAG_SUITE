@@ -23,7 +23,7 @@ def sfs_to_zarr(e, dir_ymd, config):
     else:
         mems = config["n_members"]
     if mems == 0: 
-        print('No files found for', dir_ymd)
+        print(' No files found for', dir_ymd)
         return
     for mem in range(mems):
         print("  member: ", mem)
@@ -99,12 +99,12 @@ def sfs_to_zarr(e, dir_ymd, config):
         if len(incoming_mems) == len(existing_mems):
             ds.to_zarr(config['zarr_file'], append_dim = 'time', consolidated=True)
         elif len(incoming_mems) < len(existing_mems):
-            print("latest ds has fewer members than expected")
+            print(" latest ds has fewer members than expected")
             ds = ds.reindex(member=existing_mems)
             ds = ds.chunk(zarr_chunks)
             ds.to_zarr(config['zarr_file'], append_dim='time', consolidated=True)
         else:
-            print("latest ds has more members than expected")
+            print(" latest ds has more members than expected")
             ds_existing_reindexed = xr.open_zarr(config['zarr_file']).chunk(zarr_chunks).reindex(member=all_mems)
             ds_reindexed = ds.chunk(zarr_chunks).reindex(member=all_mems)
             combined_ds = xr.concat([ds_existing_reindexed, ds_reindexed], dim='time')  
