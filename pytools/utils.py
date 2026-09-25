@@ -78,13 +78,12 @@ def get_thickness(z_l):
     return np.diff(z_i)
 
 def ds_addvar(ds, var, ds_save=None):
-    print('adding variable', var)
     # Check if variable already exists in ds
     if var in ds:
         return ds
     # Handle derived Zarr cachingif ds_save path is provided
     if (ds_save is not None) and (ds_save.exists()):
-        print(f"LOADING CACHED {var} FROM: {ds_save}")
+        print(f"opening {var} from: {ds_save}")
         ds_derived = xr.open_dataset(ds_save, engine="zarr")
         ds[var] = ds_derived[var]
         return ds
@@ -143,7 +142,7 @@ def ds_addvar(ds, var, ds_save=None):
         ds[var] = ohc_per_m2 / 1e9
     # --- SAVE TO ZARR CACHE ---
     if ds_save is not None:
-        print(f"SAVING DERIVED VAR {var} TO: {ds_save}")
+        print(f"SAVING {var} to: {ds_save}")
         da_out = ds[var].copy()
         # 2. Reset coordinates that aren't strictly core dimensions
         # Keeps dimensions like ['experiment', 'member', 'time', 'hemisphere']

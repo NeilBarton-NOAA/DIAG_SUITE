@@ -83,7 +83,6 @@ class line(object):
             if da.name not in ['ice_extent', 'ice_volume', 'snow_volume']:
                 y_label = da.attrs['y_label']
                 period_label = da.attrs['period_label']
-                dat = dat.max(dim='member') - dat.min(dim='member')
                 dat.attrs['y_label'] = y_label
                 dat.attrs['period_label'] = period_label
         fig, ax = plt.subplots()
@@ -101,7 +100,6 @@ class line(object):
                 mean = sub_dat.mean(dim='member').compute()
                 lower = sub_dat.min(dim='member').compute()
                 upper = sub_dat.max(dim='member').compute()
-                print(mean)
                 ax.plot(da.y_label, mean, color=colors[i], label=n)
                 ax.fill_between(da.y_label, lower, upper, color=colors[i], alpha=0.2)
         if not isinstance(obs, bool):

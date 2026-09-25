@@ -125,8 +125,6 @@ def main():
             print(' ', e)
             print(' ', ds.time.dt.strftime('%Y-%m-%d %HZ').values)
         exit(1)
-    #aligned_ds = xr.align(*ds, join='inner', exclude=['experiment'])
-    #ds = aligned_ds[0] if len(aligned_ds) == 1 else xr.concat(aligned_ds, dim='experiment')
     
     ################################################
     # data array for plotting/analysis
@@ -161,7 +159,7 @@ def main():
     
     ########################
     # line plots
-    if config['plot']['line'] or config['plot']['line']:
+    if config['plot']['line'] or config['plot']['spread']:
         py.plots.line.da = da
         py.plots.line.obs = obs
         py.plots.line.debug_plot = False
