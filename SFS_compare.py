@@ -177,12 +177,16 @@ def main():
                 for hem in ['NH', 'SH']:
                     py.plots.line.region = region_hem[hem]
                     py.plots.line.create()
-    # memory allocation
-    snapshot = tracemalloc.take_snapshot()
-    top_stats = snapshot.statistics('lineno')
-    print("[ Top 10 Memory Allocations ]")
-    for stat in top_stats[:10]:
-        print(stat)
+
+    ########################
+    # if profile memory
+    if config['profile']['memory']:
+        # memory allocation
+        snapshot = tracemalloc.take_snapshot()
+        top_stats = snapshot.statistics('lineno')
+        print("[ Top 10 Memory Allocations ]")
+        for stat in top_stats[:10]:
+            print(stat)
     print('SCRIPT FINISHED')
 
 if __name__ == "__main__":

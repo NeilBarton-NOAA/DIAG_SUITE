@@ -31,7 +31,6 @@ def sfs_to_zarr(e, dir_ymd, config):
         d = dir_ymd + "/00/mem" + str(mem).zfill(3) + \
             "/products/ocean/netcdf/1p00/sfs.ocean*monthly_avg*nc"
         files = glob.glob(d)
-        print(files)
         if len(files) == 0:
             print('  WARNING: no files found in ', d.split('/00/mem')[0])
             return
