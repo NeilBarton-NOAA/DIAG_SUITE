@@ -17,6 +17,7 @@ plot:
   line: True
   spread: True
   regions: ['global', 'nino34', 'tropics', 'equator', 'Arctic', 'Antarctic']
+  obs: True
 
 profile:
   memory: False

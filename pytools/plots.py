@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib
-matplotlib.use('Agg')
+#matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 class line(object):
@@ -20,8 +20,6 @@ class line(object):
         DEBUG = cls.debug_plot
         exp_names = list(da.experiment.values)
         hemisphere = {"Arctic": "NH", "Antarctic" : "SH"} 
-        if 'hemisphere' in da.dims:
-            da = da.sel(hemisphere = hemisphere[region])    
         SUFFIX = "_EXPS_" + "_".join(exp_names)
         if SPREAD:
             fig_name = 'SPREAD_' + da.name + '_' + region + '_' + da.period_label + SUFFIX + '.png'
@@ -35,9 +33,11 @@ class line(object):
                 print("FATAL: fig_name too long", len(fig_name), fig_name)
                 exit(1)
         ####################################
-        if da.name in ['ice_extent', 'ice_volume', 'snow_volume']:
-            dat = da
-        else:
+        if 'hemisphere' in da.dims:
+            dat = da.sel(hemisphere = hemisphere[region])    
+            if not isinstance(obs, bool):
+                obs = obs.sel(hemisphere = hemisphere[region])
+        else: # perform spatial reduction for global and regional plots
             if 'TLAT' in da.coords:
                 da = da.rename({"TLAT": "latitude", "TLON": "longitude"})
                 cell_area = cell_area.rename({"TLAT": "latitude", "TLON": "longitude"})    
@@ -85,6 +85,7 @@ class line(object):
                 period_label = da.attrs['period_label']
                 dat.attrs['y_label'] = y_label
                 dat.attrs['period_label'] = period_label
+        # plot model data and observations is available
         fig, ax = plt.subplots()
         if len(da.experiment.values) == 2:
             colors = ['blue', 'green']
@@ -102,8 +103,8 @@ class line(object):
                 upper = sub_dat.max(dim='member').compute()
                 ax.plot(da.y_label, mean, color=colors[i], label=n)
                 ax.fill_between(da.y_label, lower, upper, color=colors[i], alpha=0.2)
-        if not isinstance(obs, bool):
-            ax.plot(da.y_label, obs, color='k', label=obs.title)
+        if not isinstance(obs, bool) and not SPREAD:
+            ax.plot(da.y_label, obs.compute(), color='k', label=obs.title)
         ax.set_xlim(da.y_label.min(), da.y_label.max())
         ax.legend(frameon=False)
         ax.set_ylabel(da.name + (' Spread' if SPREAD else ''))

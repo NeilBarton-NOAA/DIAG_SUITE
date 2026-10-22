@@ -23,7 +23,6 @@ def grabdata(ds_save, exps, ymd, FORCE_CALC = False):
             mems = len(glob.glob(e + "/sfs." + ymd + "/00/mem*/products/ocean/netcdf/1p00/"))
             for mem in range(mems):
                 print("  member: ", mem)
-                #print(e + d)
                 # MOM6 output
                 d = "/sfs." + ymd + "/00/mem" + str(mem).zfill(3) + \
                     "/products/ocean/netcdf/1p00/sfs.ocean*monthly_avg*nc"
@@ -157,79 +156,6 @@ def ds_addvar(ds, var, ds_save=None):
         ds_out.to_zarr(ds_save, mode='w', consolidated=True)
     return ds
 
-
-
-
-
-
-
-
-
-
-    print('adding variable', var)
-    if var in ['ice_extent', 'snow_volume', 'ice_volume']:
-        # 1. Pull 2D static coordinates into RAM as small NumPy arrays (~a few KB)
-        # This prevents Dask from broadcasting 2D grid metrics across member/time/exp dimensions
-        tlat = ds['TLAT'].values if hasattr(ds['TLAT'], 'values') else ds['TLAT'].compute().values
-        area = ds['cell_area'].values if hasattr(ds['cell_area'], 'values') else ds['cell_area'].compute().values
-        area = area / 1e12  # Convert m^2 to 10^6 km^2 upfront
-
-        # 2. Create 2D hemisphere boolean masks
-        nh_mask = tlat > 20
-        sh_mask = tlat < -20
-
-        # 3. Streamlined computation using .where() rather than large array multiplication
-        if var == 'ice_extent':
-            # Create a boolean mask for ice extent (aice >= 15%)
-            ice_mask = ds['aice'] >= 0.15
-            
-            # Apply spatial area and sum over grid dimensions lazily
-            nh_val = (ds['cell_area'].where(ice_mask & nh_mask)).sum(dim=['nj', 'ni']) / 1e12
-            sh_val = (ds['cell_area'].where(ice_mask & sh_mask)).sum(dim=['nj', 'ni']) / 1e12
-
-        elif var == 'snow_volume':
-            snow_vol = ds['aice'] * ds['hs'] * area
-            nh_val = snow_vol.where(nh_mask).sum(dim=['nj', 'ni'])
-            sh_val = snow_vol.where(sh_mask).sum(dim=['nj', 'ni'])
-
-        elif var == 'ice_volume':
-            ice_vol = ds['aice'] * ds['hi'] * area
-            nh_val = ice_vol.where(nh_mask).sum(dim=['nj', 'ni'])
-            sh_val = ice_vol.where(sh_mask).sum(dim=['nj', 'ni'])
-
-        # 4. Concatenate both hemispheres into a single spatial-collapsed array
-        nh_val = nh_val.expand_dims({'hemisphere': ['NH']})
-        sh_val = sh_val.expand_dims({'hemisphere': ['SH']})
-        
-        # 5. Compute the final collapsed timeseries (~few KB total size)
-        ds[var] = xr.concat([nh_val, sh_val], dim='hemisphere').compute()
-    if var == 'SSS':
-        ds[var] = ds['so'].isel(z_l = 0 )
-    if var == 'SVA':
-        h = xr.DataArray(get_thickness(ds['z_l']), coords={'z_l': ds.z_l}, dims=['z_l'])
-        salt = ds['so'] * h
-        salt_w = salt.sum(dim='z_l') / h.sum(dim='z_l')
-        ds[var] = salt_w.where(ds['SST'].notnull())
-    if var == 'WWV':
-        R = 6371000  # Radius of Earth in meters
-        d_lat = np.radians(1.0) # 1 degree in radians
-        d_lon = np.radians(1.0) # 1 degree in radians
-        area = (R**2) * d_lat * d_lon * np.cos(np.radians(ds['latitude']))
-        mld_broadcast, area = xr.broadcast(ds['dt20c'], area)
-        ds[var] = (ds['dt20c'] * area) / 1e9
-    if var == 'ocnheat':
-        ds['ocnheat'] = ds['ocnheat'] / 1e9
-    if var == 'T300':
-        rho0 = 1035.0
-        cp = 3991.8679
-        ds['h'] = xr.DataArray(get_thickness(ds['z_l']), coords={'z_l': ds.z_l}, dims=['z_l'])
-        depth_bottom = ds.h.cumsum(dim='z_l')
-        depth_top = depth_bottom - ds.h
-        dz_300 = np.maximum(0, np.minimum(depth_bottom, 300) - depth_top)
-        ohc_per_m2 = (ds.temp * dz_300 * rho0 * cp).sum(dim='z_l')
-        ds[var] = ohc_per_m2 / 1e9
-    return ds
-
 def interp(SRC_DATA, DES, interp_method = 'bilinear', extrap_method = 'nearest_s2d'):
     ########################
     # create regridder/interpolate data/ make new data array
@@ -270,21 +196,46 @@ def get_area(ds, da):
         cell_area = np.cos(np.deg2rad(ds.latitude))
     return da, cell_area
 
-def sel_analysis_period(da, forecast_time, analysis_period):
+def sel_analysis_period(da, forecast_time, analysis_period, obs = False):
     if analysis_period == 'first':
         da.attrs['period_label'] = str(da.time.values[0])[:7]
         da = da.isel(time = 0)
+        if not isinstance(obs, bool):
+            obs = obs.isel(time = 0)
         forecast_times = forecast_time.isel(time = 0)
     elif analysis_period == 'all':
         da = da.mean(dim = 'time', keep_attrs=True)
+        if not isinstance(obs, bool):
+            obs = obs.mean(dim = 'time', keep_attrs=True)
         da.attrs['period_label'] = 'ALL'
         forecast_times = forecast_time #.sel(time = da.period_label).squeeze(dim='time').drop_vars('time')
     elif len(analysis_period) == 6: #YYYYMM
         da.attrs['period_label'] = f"{analysis_period[:4]}-{analysis_period[4:]}"
         da = da.sel(time = da.period_label).squeeze(dim='time').drop_vars('time')
+        if not isinstance(obs, bool):
+            obs = obs.sel(time = da.period_label).squeeze(dim='time').drop_vars('time')
         forecast_times = forecast_time.sel(time = da.period_label).squeeze(dim='time').drop_vars('time')
     else:
         print('FATAL: analysis_period unknown', analysis_period)
         exit(1)
-    return da, forecast_times
+    print("Forecast Times Averaged for Plots:")
+    print(forecast_times['time'].values)
+    return da, forecast_times, obs
 
+def calc_cell_area(ds):
+    R = 6371000.0  
+    lats = ds.latitude.values
+    lons = ds.longitude.values
+    dlat_rad = np.radians(np.abs(np.mean(np.diff(lats))))
+    dlon_rad = np.radians(np.abs(np.mean(np.diff(lons))))
+    # Convert latitudes to radians and clamp bounds to [-90, 90]
+    lats_clamped = np.clip(lats, -90.0, 90.0)
+    lat_rad = np.radians(lats_clamped)
+    # Calculate 1D area (strictly non-negative)
+    cell_area_1d = (R**2) * dlat_rad * dlon_rad * np.cos(lat_rad)
+    # Broadcast to 2D matching your dataset
+    cell_area_2d = np.tile(cell_area_1d[:, np.newaxis], (1, len(lons)))
+    cell_area = xr.DataArray(data=cell_area_2d / 1e6,  # Convert m² to km²
+        coords={"latitude": ds.latitude, "longitude": ds.longitude},
+        dims=["latitude", "longitude"])
+    return cell_area

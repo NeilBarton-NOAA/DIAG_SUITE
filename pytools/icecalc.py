@@ -9,7 +9,7 @@ class extent(object):
     grid_size = None
     @classmethod
     def calc(cls):
-        dat = cls.ds[cls.var]
+        dat = cls.ds[cls.var].fillna(0)
         dims = cls.ds[cls.var].dims[-2::] if len(cls.ds[cls.var].dims) > 2 else cls.ds[cls.var].dims
         lat = 'lat' if 'lat' in dat.coords else 'TLAT'
         if 'nj' in cls.ds[cls.var].dims:
@@ -27,16 +27,9 @@ class extent(object):
                 pole_data.append(EXT)
             ds = xr.concat(pole_data, dim = 'pole')
         else: 
-            if cls.grid_size:
-                grid_size = cls.grid_size
-            else:
-                if cls.var == 'ice_con':
-                    grid_size = float(cls.ds.grid.replace('km','').replace('NH','').replace('SH',''))**2.0
-                else:
-                    grid_size = float(cls.ds[cls.var].dims[-1][-2::])**2.0
-            area = xr.ones_like(cls.ds[cls.var]) * grid_size
-            dat = cls.ds[cls.var]
+            area = xr.ones_like(cls.ds[cls.var]) * cls.grid_size
             DIV = 1e6
+            test = area.where(dat >= 0.15).sum(dim = dims) / DIV
             ds = area.where(dat >= 0.15).sum(dim = dims) / DIV
             ds.name = 'extent'
         return ds

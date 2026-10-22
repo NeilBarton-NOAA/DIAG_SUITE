@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import argparse
+import dask
+#dask.config.set(scheduler='synchronous')
 import sys, os, shutil
 p = os.getenv("pytools", os.path.dirname(os.path.realpath(__file__)))
 if p not in sys.path: sys.path.insert(0, p)
@@ -37,7 +39,8 @@ def main():
                         help = 'list variables that are already set up') 
     parser.add_argument('-d','--debug', action = argparse.BooleanOptionalAction, default=False,
                         help = 'show plot for debugging') 
-    ############
+    
+    ################################################
     args = parser.parse_args()
     config = py.load_yaml(args.yaml)
     var = args.var[0]
@@ -51,7 +54,7 @@ def main():
     list_vars = args.list_vars
     DEBUG = args.debug
 
-    ############
+    ################################################
     if list_vars:
         for k in py.maps.limits:
             print(k)
@@ -60,7 +63,7 @@ def main():
         print('snow_volume')
         exit(1)
 
-    ############
+    ################################################
     if experiments == 'ALL':
         print('GRABBING ALL EXPERIMENTS AT:', comroot)
         experiments = [comroot + '/' + d for d in os.listdir(comroot) if os.path.isdir(comroot + '/' + d) and d != 'ZARR']
@@ -114,6 +117,8 @@ def main():
     for d in ds[1:]:
         common_members &= set(d.member.values)
     common_members = sorted(list(common_members))
+
+    ################################################
     # Subset datasets to only common members before concatenating
     aligned_ds = [d.sel(member=common_members) for d in aligned_ds]
     ds = aligned_ds[0] if len(aligned_ds) == 1 else xr.concat(aligned_ds, dim='experiment')
@@ -125,7 +130,7 @@ def main():
             print(' ', e)
             print(' ', ds.time.dt.strftime('%Y-%m-%d %HZ').values)
         exit(1)
-    
+
     ################################################
     # data array for plotting/analysis
     ds = py.ds_addvar(ds, var, Path(config['comroot'] + "/ZARR/") / Path(e + '_monthly_' + var + '.zarr'))
@@ -135,19 +140,28 @@ def main():
     da.attrs['model'] = model
     da.attrs['y_label'] = ds['forecast_month'].values
     da, cell_area = py.get_area(ds.sel(experiment = exp_names), da)
-    da, forecast_times = py.sel_analysis_period(da, ds.forecast_time, analysis_period) # select time for analysis
     
     ################################################
     # grab obs
-    #if var in ['ice_extent']: # 'SST'
-    #    cm.start_dtg = pd.to_datetime(forecast_times.values.min()).replace(day = 1)
-    #    cm.end_dtg = pd.to_datetime(forecast_times.values.max()) + pd.offsets.MonthEnd(0)
-    #    cm.var = var
-    #    obs = cm.grab()
-    #else:
-    #    obs = False
-    obs = False 
-    ########################
+    obs = False
+    if config['plot']['obs']:
+        if var in ['ice_extent']: # 'SST'
+            # Compute min/max using single-threaded execution to prevent Dask thread crashes
+            min_time = ds['time'].compute(scheduler='single-threaded').min().item()
+            max_time = ds['time'].compute(scheduler='single-threaded').max().item()
+            cm.start_dtg = pd.to_datetime(min_time).replace(day = 1)
+            cm.end_dtg = pd.to_datetime(max_time) + pd.offsets.MonthEnd(0)
+            cm.var = var
+            obs = cm.grab()
+            common_times = obs.indexes['time'].intersection(da.indexes['time'])
+            obs = obs.sel(time=common_times)
+            da = da.sel(time=common_times)
+
+    ################################################
+    # get time period of analysis and create mean
+    da, forecast_times, obs = py.sel_analysis_period(da, ds.forecast_time, analysis_period, obs) # select time for analysis
+
+    ################################################
     # spatial plots
     # global
     if config['plot']['maps']:
@@ -162,7 +176,7 @@ def main():
     if config['plot']['line'] or config['plot']['spread']:
         py.plots.line.da = da
         py.plots.line.obs = obs
-        py.plots.line.debug_plot = False
+        py.plots.line.debug_plot = DEBUG
         py.plots.line.cell_area = cell_area
         region_hem = { "NH": "Arctic", "SH": "Antarctic" }
         spread_options = [config['plot']['line'] == False, config['plot']['spread']]
