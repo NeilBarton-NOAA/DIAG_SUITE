@@ -1,22 +1,22 @@
 #!/bin/sh
 set -u
 BACKGROUND_JOB=F
-WALLTIME="02:00:00"
+WALLTIME="04:00:00"
 source ${PWD}/machine/config.sh && machine_config ${PWD}
 
 #GFS SFS ICs
-#dir_hpss="/NCEPDEV/emc-marine/5year/Neil.Barton/SFS_GFS_ICS"
-#file_hpss="2026080100"
-#export exp_dir="${WORK_DIR}/${USER}/ICs/GFS/C192mx025"
+dir_hpss="/NCEPDEV/emc-marine/5year/Neil.Barton/SFS_GFS_ICS"
+file_hpss="2026110100"
+export exp_dir="${WORK_DIR}/${USER}/ICs/GFS/C192mx025"
 
 # SFS runs
 #exp=beta1.1_CPC_ICs_PND_TOPO
-exp=beta1.1_FINAL
-dir_hpss="/NCEPDEV/emc-marine/5year/*eil.*arton/*/${exp}/*00/"
+#exp=beta1.1_FINAL
+#dir_hpss="/NCEPDEV/emc-marine/5year/*eil.*arton/*/${exp}/*00/"
 #dir_hpss="/NCEPDEV/emc-climate/5year/Jiande.Wang/URSA/beta1.1_GFS_ICs/SFS_C192mx025_GFSV17ICs/*00/"
 #/NCEPDEV/emc-climate/5year/Jiande.Wang/URSA/C192mx025-reforecast_Sep01
-file_hpss=namelists
-export exp_dir=${COMROOT}/${exp}
+#file_hpss=namelists
+#export exp_dir=${COMROOT}/${exp}
 #num_files=64 && file_name="6hr_avg*nc"
 
 # GFS RealTime
